@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DndContext, PointerSensor, type DragEndEvent, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { AlertCircle, Columns3, GripVertical, List, Plus, Search } from "lucide-react";
 import { stockApi, type Operation } from "@/lib/stock-api";
@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { SkeletonTable } from "@/components/skeleton-table";
 import { EmptyState } from "@/components/empty-state";
+import { showErrorToast, showInfoToast } from "@/lib/toast-utils";
 
 const CONFIG = {
   receipts: { type: "receipt", title: "Receipts", description: "Track incoming stock from suppliers through draft, ready, and done states." },
@@ -122,11 +123,18 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
       if (!action) throw new Error(`Cannot move ${config.type} from ${operation.status} to ${targetStatus}`);
       return stockApi.operationAction(operationId, action);
     },
-    onSuccess: () => {
+    onSuccess: (updatedOperation, { targetStatus }) => {
       void queryClient.invalidateQueries({ queryKey: ["operations", config.type] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["moves"] });
+      if (updatedOperation.status !== targetStatus) {
+        const reason = updatedOperation.status === "waiting"
+          ? "This delivery is waiting because there isn’t enough available stock."
+          : `The server saved it as ${updatedOperation.status}.`;
+        showInfoToast(reason, { title: "Status updated" });
+      }
     },
+    onError: (error) => showErrorToast(error, "Could not move operation"),
   });
 
   return (
@@ -271,7 +279,10 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
 function OperationKanban({ operations, kind, onDrop }: { operations: Operation[]; kind: "receipts" | "deliveries"; onDrop: (operationId: string, targetStatus: string) => void }) {
   const statuses = STATUSES[kind];
   const title = CONFIG[kind].title;
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
@@ -308,16 +319,24 @@ function KanbanColumn({ status, count, children }: { status: string; count: numb
 }
 
 function KanbanCard({ operation, kind }: { operation: Operation; kind: "receipts" | "deliveries" }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, isDragging } = useDraggable({
     id: operation.id,
     data: { operation },
   });
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className={`relative rounded-md border border-border bg-card transition-colors hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "opacity-40 shadow-lg" : ""}`}>
-      <div className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab text-muted-foreground active:cursor-grabbing">
+    <div ref={setNodeRef} style={style} className={`relative rounded-md border border-border bg-card transition-colors hover:border-primary/40 hover:bg-accent/40 ${isDragging ? "opacity-40 shadow-lg" : ""}`}>
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        {...listeners}
+        {...attributes}
+        aria-label={`Drag ${operation.reference}`}
+        title="Drag to change status"
+        className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab touch-none text-muted-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <GripVertical className="size-4" />
-      </div>
+      </button>
       <Link href={`/operations/${kind}/${operation.id}`} className="block p-3 pl-6" onPointerDown={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-2"><span className="font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status} /></div>
         <p className="mt-2 truncate text-sm font-medium">{operation.partnerName ?? (kind === "receipts" ? "Vendor" : "Customer")}</p>
