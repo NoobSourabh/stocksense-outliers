@@ -55,10 +55,20 @@ function readFilters(params: URLSearchParams): DashboardFilters {
   };
 }
 
-function formatDate(value?: string | null): string {
+function formatDateTime(value?: string | null): string {
   if (!value) return "—";
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(date);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const fallback = new Date(`${value.slice(0, 10)}T00:00:00`);
+    return Number.isNaN(fallback.getTime()) ? value : new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(fallback);
+  }
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function typeLabel(type: string): string {
@@ -91,16 +101,16 @@ function SummaryCard({ kind, title, primary, late, total, waiting }: { kind: "re
   return (
     <Link href={href} className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
       <WarehousePanel className="p-5 transition-shadow hover:shadow-m3-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="size-4" /></span>{title}</div>
-        <ArrowUpRight className="size-4 text-muted-foreground" />
-      </div>
-      <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">{primary}<span className="ml-2 text-sm font-normal text-muted-foreground">to {kind === "receipt" ? "receive" : "deliver"}</span></p>
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
-        <span className={late ? "font-medium text-warning" : ""}>{late} late</span>
-        {waiting !== undefined && <span className={waiting ? "font-medium text-destructive" : ""}>{waiting} waiting</span>}
-        <span>{total} operations</span>
-      </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="size-4" /></span>{title}</div>
+          <ArrowUpRight className="size-4 text-muted-foreground" />
+        </div>
+        <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">{primary}<span className="ml-2 text-sm font-normal text-muted-foreground">to {kind === "receipt" ? "receive" : "deliver"}</span></p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+          <span className={late ? "font-medium text-warning" : ""}>{late} late</span>
+          {waiting !== undefined && <span className={waiting ? "font-medium text-destructive" : ""}>{waiting} waiting</span>}
+          <span>{total} operations</span>
+        </div>
       </WarehousePanel>
     </Link>
   );
@@ -203,27 +213,27 @@ export function DashboardClient() {
                 <p className="py-8 text-center text-sm text-muted-foreground">No products need attention for this stock scope.</p>
               ) : (
                 <>
-                <div className="grid gap-3 md:hidden">
-                  {data.lowStock.map((item) => <article key={item.productId} className="rounded-lg border border-border p-4">
-                    <div className="flex items-start justify-between gap-3"><Link href={`/products/${item.productId}`} className="font-medium text-primary hover:underline">{item.productName}</Link><span className="shrink-0 text-xs font-medium text-warning">{Number(item.onHand) === 0 ? "Out of stock" : "Low stock"}</span></div>
-                    <p className="mt-1 font-mono text-xs text-muted-foreground">{item.sku}</p>
-                    <dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">On hand</dt><dd className="mt-0.5">{item.onHand} {item.unit}</dd></div><div><dt className="text-xs text-muted-foreground">Reorder point</dt><dd className="mt-0.5">{item.reorderPoint} {item.unit}</dd></div></dl>
-                  </article>)}
-                </div>
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[560px] text-left">
-                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Product", "SKU", "On hand", "Reorder point", "Status"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
-                    <tbody>{data.lowStock.map((item) => (
-                      <tr key={item.productId} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
-                        <td className="px-3 py-3.5 text-sm"><Link href={`/products/${item.productId}`} className="font-medium text-primary hover:underline">{item.productName}</Link></td>
-                        <td className="px-3 py-3.5 font-mono text-sm text-muted-foreground">{item.sku}</td>
-                        <td className="px-3 py-3.5 text-sm tabular-nums">{item.onHand} {item.unit}</td>
-                        <td className="px-3 py-3.5 text-sm tabular-nums">{item.reorderPoint} {item.unit}</td>
-                        <td className="px-3 py-3.5 text-sm font-medium text-warning">{Number(item.onHand) === 0 ? "Out of stock" : "Low stock"}</td>
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>
+                  <div className="grid gap-3 md:hidden">
+                    {data.lowStock.map((item) => <article key={item.productId} className="rounded-lg border border-border p-4">
+                      <div className="flex items-start justify-between gap-3"><Link href={`/products/${item.productId}`} className="font-medium text-primary hover:underline">{item.productName}</Link><span className="shrink-0 text-xs font-medium text-warning">{Number(item.onHand) === 0 ? "Out of stock" : "Low stock"}</span></div>
+                      <p className="mt-1 font-mono text-xs text-muted-foreground">{item.sku}</p>
+                      <dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">On hand</dt><dd className="mt-0.5">{item.onHand} {item.unit}</dd></div><div><dt className="text-xs text-muted-foreground">Reorder point</dt><dd className="mt-0.5">{item.reorderPoint} {item.unit}</dd></div></dl>
+                    </article>)}
+                  </div>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[560px] text-left">
+                      <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Product", "SKU", "On hand", "Reorder point", "Status"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
+                      <tbody>{data.lowStock.map((item) => (
+                        <tr key={item.productId} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
+                          <td className="px-3 py-3.5 text-sm"><Link href={`/products/${item.productId}`} className="font-medium text-primary hover:underline">{item.productName}</Link></td>
+                          <td className="px-3 py-3.5 font-mono text-sm text-muted-foreground">{item.sku}</td>
+                          <td className="px-3 py-3.5 text-sm tabular-nums">{item.onHand} {item.unit}</td>
+                          <td className="px-3 py-3.5 text-sm tabular-nums">{item.reorderPoint} {item.unit}</td>
+                          <td className="px-3 py-3.5 text-sm font-medium text-warning">{Number(item.onHand) === 0 ? "Out of stock" : "Low stock"}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
                 </>
               )}
             </RoutePanel>
@@ -238,28 +248,48 @@ export function DashboardClient() {
                 </div>
               ) : (
                 <>
-                <div className="grid gap-3 md:hidden">
-                  {operations.map((operation) => <Link key={operation.id} href={operationHref(operation)} className="rounded-lg border border-border p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <div className="flex items-start justify-between gap-3"><span className="truncate font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></div>
-                    <p className="mt-1 text-xs text-muted-foreground">{typeLabel(operation.type)} · {formatDate(operation.scheduleDate ?? operation.schedule_date)}</p>
-                    <dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">Contact</dt><dd className="truncate">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</dd></div><div><dt className="text-xs text-muted-foreground">Responsible</dt><dd className="truncate">{operation.createdByName ?? operation.responsibleUser ?? "—"}</dd></div></dl>
-                  </Link>)}
-                </div>
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[850px] text-left">
-                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled", "Status", "Responsible"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
-                    <tbody>{operations.map((operation) => (
-                      <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
-                        <td className="px-3 py-3.5 font-mono text-sm font-medium"><Link className="text-primary hover:underline" href={operationHref(operation)}>{operation.reference}</Link></td>
-                        <td className="px-3 py-3.5 text-sm">{typeLabel(operation.type)}</td>
-                        <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</td>
-                        <td className="px-3 py-3.5 text-sm text-muted-foreground">{formatDate(operation.scheduleDate ?? operation.schedule_date)}</td>
-                        <td className="px-3 py-3.5"><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></td>
-                        <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.createdByName ?? operation.responsibleUser ?? "—"}</td>
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>
+                  <div className="grid gap-3 md:hidden">
+                    {operations.map((operation) => <Link key={operation.id} href={operationHref(operation)} className="rounded-lg border border-border p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <div className="flex items-start justify-between gap-3"><span className="truncate font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></div>
+                      <p className="mt-1 text-xs text-muted-foreground">{typeLabel(operation.type)} · {formatDateTime(operation.scheduleDate ?? operation.schedule_date)}</p>
+                      <dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">Contact</dt><dd className="truncate">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</dd></div><div><dt className="text-xs text-muted-foreground">Responsible</dt><dd className="truncate">{operation.createdByName ?? operation.responsibleUser ?? "—"}</dd></div></dl>
+                    </Link>)}
+                  </div>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[850px] text-left">
+                      <thead>
+                        <tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {["Reference", "Type", "Contact", "Scheduled date & time", "Status", "Responsible"].map((name) => (
+                            <th key={name} className="px-3 py-3 font-medium">{name}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {operations.map((operation) => (
+                          <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
+                            <td className="px-3 py-3.5 font-mono text-sm font-medium">
+                              <Link className="text-primary hover:underline" href={operationHref(operation)}>
+                                {operation.reference}
+                              </Link>
+                            </td>
+                            <td className="px-3 py-3.5 text-sm">{typeLabel(operation.type)}</td>
+                            <td className="px-3 py-3.5 text-sm text-muted-foreground">
+                              {operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}
+                            </td>
+                            <td className="px-3 py-3.5 text-sm text-muted-foreground">
+                              {formatDateTime(operation.scheduleDate ?? operation.schedule_date)}
+                            </td>
+                            <td className="px-3 py-3.5">
+                              <StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} />
+                            </td>
+                            <td className="px-3 py-3.5 text-sm text-muted-foreground">
+                              {operation.createdByName ?? operation.responsibleUser ?? "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </>
               )}
             </RoutePanel>

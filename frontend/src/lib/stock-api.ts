@@ -9,7 +9,7 @@ export interface Warehouse { id: string; code: string; name: string; address?: s
 export interface Partner { id: string; name: string; kind: string; isActive: boolean }
 export interface Balance { locationId: string; locationName: string; warehouseName: string; onHand: string; freeToUse: string }
 export interface Product { id: string; name: string; sku: string; categoryId?: string; categoryName: string; unit: string; unitCost: string; reorderPoint: string; onHand?: string; freeToUse?: string; onHandTotal?: string; freeToUseTotal?: string; isActive: boolean; balances?: Balance[] }
-export interface ProductInput { name: string; sku: string; categoryId: string; unit: string; unitCost: string; reorderPoint: string; initialStock?: string }
+export interface ProductInput { name: string; sku: string; categoryId: string; unit: string; unitCost: string; reorderPoint: string; initialStock?: { locationId: string; quantity: string } }
 export interface OperationLine { id: string; productId: string; productName: string; productSku: string; quantity: string; countedQuantity?: string | null; previousQuantity?: string | null; delta?: string | null; reason?: string | null; isShort: boolean }
 export interface Operation { id: string; reference: string; type: string; status: string; partnerId?: string | null; partnerName?: string | null; sourceLocationId?: string | null; sourceLocationName?: string | null; destinationLocationId?: string | null; destinationLocationName?: string | null; scheduleDate?: string | null; note?: string | null; createdByName?: string; createdAt?: string; lineCount?: number; isLate: boolean; lines?: OperationLine[] }
 export interface OperationInput { type: string; partnerId?: string | null; sourceLocationId?: string | null; destinationLocationId?: string | null; scheduleDate?: string | null; note?: string | null; lines: { productId: string; quantity: string; countedQuantity?: string; reason?: string }[] }
@@ -51,6 +51,7 @@ export const stockApi = {
   operations: (filters: OperationFilters = {}) => apiFetch<Page<Operation>>(`/operations${queryString(filters)}`, { auth: true }),
   operation: (id: string) => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}`, { auth: true }),
   createOperation: (body: OperationInput) => apiFetch<Operation>("/operations", { method: "POST", body, auth: true }),
+  updateOperation: (id: string, body: Partial<OperationInput>) => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}`, { method: "PATCH", body, auth: true }),
   operationAction: (id: string, action: "ready" | "validate" | "cancel") => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}/${action}`, { method: "POST", auth: true }),
   moves: (filters: { type?: string; productId?: string; locationId?: string; fromDate?: string; toDate?: string; search?: string; limit?: number } = {}) => apiFetch<Page<StockMove>>(`/moves${queryString(filters)}`, { auth: true }),
 };

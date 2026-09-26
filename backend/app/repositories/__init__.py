@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from sqlalchemy import case, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import aliased, joinedload, selectinload
 
 from app.models import (
     Category,
@@ -229,6 +229,7 @@ async def get_product_by_id(db: AsyncSession, product_id: uuid.UUID) -> Product 
             selectinload(Product.balances).joinedload(StockBalance.location).joinedload(Location.warehouse),
         )
         .where(Product.id == product_id)
+        .execution_options(populate_existing=True)
     )
     return result.scalar_one_or_none()
 
@@ -256,15 +257,20 @@ async def get_total_on_hand(db: AsyncSession, product_id: uuid.UUID) -> Decimal:
     return Decimal(str(result.scalar_one()))
 
 
-async def get_total_free_to_use(db: AsyncSession, product_id: uuid.UUID) -> Decimal:
+async def get_total_free_to_use(
+    db: AsyncSession,
+    product_id: uuid.UUID,
+    exclude_operation_id: uuid.UUID | None = None,
+) -> Decimal:
     """
     Free-to-use = on_hand - reserved by open deliveries (waiting/ready status).
     Reserved = sum of operation_lines.quantity for delivery ops in waiting/ready.
+    Optionally excludes a specific operation (e.g. the operation being evaluated).
     """
     on_hand = await get_total_on_hand(db, product_id)
 
     # Sum reserved quantity from open delivery lines
-    reserved_result = await db.execute(
+    stmt = (
         select(func.coalesce(func.sum(OperationLine.quantity), 0))
         .join(StockOperation, OperationLine.operation_id == StockOperation.id)
         .where(
@@ -273,19 +279,28 @@ async def get_total_free_to_use(db: AsyncSession, product_id: uuid.UUID) -> Deci
             StockOperation.status.in_([OperationStatus.WAITING, OperationStatus.READY]),
         )
     )
+    if exclude_operation_id:
+        stmt = stmt.where(StockOperation.id != exclude_operation_id)
+    reserved_result = await db.execute(stmt)
     reserved = Decimal(str(reserved_result.scalar_one()))
     free = on_hand - reserved
     return max(free, Decimal("0"))
 
 
 async def get_free_to_use_at_location(
-    db: AsyncSession, product_id: uuid.UUID, location_id: uuid.UUID
+    db: AsyncSession,
+    product_id: uuid.UUID,
+    location_id: uuid.UUID,
+    exclude_operation_id: uuid.UUID | None = None,
 ) -> Decimal:
-    """Free-to-use for a specific product at a specific location."""
+    """
+    Free-to-use for a specific product at a specific location.
+    Optionally excludes a specific operation (e.g. the operation being evaluated).
+    """
     balance = await get_balance(db, product_id, location_id)
     on_hand = balance.on_hand_quantity if balance else Decimal("0")
 
-    reserved_result = await db.execute(
+    stmt = (
         select(func.coalesce(func.sum(OperationLine.quantity), 0))
         .join(StockOperation, OperationLine.operation_id == StockOperation.id)
         .where(
@@ -295,6 +310,9 @@ async def get_free_to_use_at_location(
             StockOperation.status.in_([OperationStatus.WAITING, OperationStatus.READY]),
         )
     )
+    if exclude_operation_id:
+        stmt = stmt.where(StockOperation.id != exclude_operation_id)
+    reserved_result = await db.execute(stmt)
     reserved = Decimal(str(reserved_result.scalar_one()))
     return max(on_hand - reserved, Decimal("0"))
 
@@ -404,6 +422,7 @@ async def list_operations(
     db: AsyncSession,
     op_type: str | None = None,
     status: str | None = None,
+    warehouse_id: uuid.UUID | None = None,
     search: str | None = None,
     limit: int = 50,
 ) -> list[StockOperation]:
@@ -423,6 +442,14 @@ async def list_operations(
         stmt = stmt.where(StockOperation.type == op_type)
     if status:
         stmt = stmt.where(StockOperation.status == status)
+    if warehouse_id:
+        src_loc = aliased(Location)
+        dst_loc = aliased(Location)
+        stmt = (
+            stmt.outerjoin(src_loc, StockOperation.source_location_id == src_loc.id)
+            .outerjoin(dst_loc, StockOperation.destination_location_id == dst_loc.id)
+            .where((src_loc.warehouse_id == warehouse_id) | (dst_loc.warehouse_id == warehouse_id))
+        )
     if search:
         pattern = f"%{search}%"
         stmt = stmt.where(
@@ -545,6 +572,7 @@ async def get_operation_by_id(db: AsyncSession, operation_id: uuid.UUID) -> Stoc
             selectinload(StockOperation.moves),
         )
         .where(StockOperation.id == operation_id)
+        .execution_options(populate_existing=True)
     )
     return result.scalar_one_or_none()
 
@@ -646,7 +674,7 @@ async def count_active_locations(db: AsyncSession) -> int:
 
 async def get_receipt_summary(db: AsyncSession) -> dict:
     """Receipt summary: to_receive (not done/canceled), late, total."""
-    today = date.today()
+    now = datetime.now(timezone.utc)
 
     # Total non-terminal receipts
     total_result = await db.execute(
@@ -657,12 +685,12 @@ async def get_receipt_summary(db: AsyncSession) -> dict:
     )
     total = total_result.scalar_one()
 
-    # Late: schedule_date < today and not done/canceled
+    # Late: schedule_date < now and not done/canceled
     late_result = await db.execute(
         select(func.count()).select_from(StockOperation).where(
             StockOperation.type == OperationType.RECEIPT,
             StockOperation.status.notin_([OperationStatus.DONE, OperationStatus.CANCELED]),
-            StockOperation.schedule_date < today,
+            StockOperation.schedule_date < now,
             StockOperation.schedule_date.isnot(None),
         )
     )
@@ -673,7 +701,7 @@ async def get_receipt_summary(db: AsyncSession) -> dict:
 
 async def get_delivery_summary(db: AsyncSession) -> dict:
     """Delivery summary: to_deliver, late, waiting, total."""
-    today = date.today()
+    now = datetime.now(timezone.utc)
 
     total_result = await db.execute(
         select(func.count()).select_from(StockOperation).where(
@@ -687,7 +715,7 @@ async def get_delivery_summary(db: AsyncSession) -> dict:
         select(func.count()).select_from(StockOperation).where(
             StockOperation.type == OperationType.DELIVERY,
             StockOperation.status.notin_([OperationStatus.DONE, OperationStatus.CANCELED]),
-            StockOperation.schedule_date < today,
+            StockOperation.schedule_date < now,
             StockOperation.schedule_date.isnot(None),
         )
     )

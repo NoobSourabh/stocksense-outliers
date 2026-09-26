@@ -30,6 +30,24 @@ const STATUSES = {
   adjustments: ["draft", "ready", "done", "canceled"],
 } as const;
 
+function formatDateTime(value?: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const fallback = new Date(`${value.slice(0, 10)}T00:00:00`);
+    return Number.isNaN(fallback.getTime())
+      ? value
+      : new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(fallback);
+  }
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function OperationList({ kind }: { kind: keyof typeof CONFIG }) {
   return (
     <Suspense fallback={
@@ -98,51 +116,51 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
           <p className="py-12 text-center text-sm text-muted-foreground">No operations match these filters.</p>
         ) : (
           <>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1050px] text-left">
-              <thead>
-                <tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  {["Reference", "Contact", "Source", "Destination", "Schedule date", "Lines", "Status", "Responsible"].map((label) => (
-                    <th key={label} className="px-3 py-3 font-medium">{label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {operations.data.items.map((operation: Operation) => (
-                  <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
-                    <td className="px-3 py-3 font-mono text-sm">
-                      <Link className="font-medium text-primary hover:underline" href={`/operations/${kind}/${operation.id}`}>{operation.reference}</Link>
-                    </td>
-                    <td className="px-3 py-3 text-sm">{operation.partnerName ?? "—"}</td>
-                    <td className="px-3 py-3 text-sm">{operation.sourceLocationName ?? "—"}</td>
-                    <td className="px-3 py-3 text-sm">{operation.destinationLocationName ?? "—"}</td>
-                    <td className="px-3 py-3 text-sm">{operation.scheduleDate ?? "—"}</td>
-                    <td className="px-3 py-3 text-sm">{operation.lineCount ?? operation.lines?.length ?? "—"}</td>
-                    <td className="px-3 py-3"><StatusBadge status={operation.status} /></td>
-                    <td className="px-3 py-3 text-sm">{operation.createdByName ?? "—"}</td>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[1050px] text-left">
+                <thead>
+                  <tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    {["Reference", "Contact", "Source", "Destination", "Schedule date", "Lines", "Status", "Responsible"].map((label) => (
+                      <th key={label} className="px-3 py-3 font-medium">{label}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="grid gap-3 md:hidden">
-            {operations.data.items.map((operation: Operation) => (
-              <Link key={operation.id} href={`/operations/${kind}/${operation.id}`} className="rounded-lg border border-border p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <div className="flex min-w-0 items-start justify-between gap-3">
-                  <span className="truncate font-mono text-sm font-medium text-primary">{operation.reference}</span>
-                  <StatusBadge status={operation.status} />
-                </div>
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <ListField label="Contact" value={operation.partnerName ?? "—"} />
-                  <ListField label="Schedule date" value={operation.scheduleDate ?? "—"} />
-                  <ListField label="Source" value={operation.sourceLocationName ?? "—"} />
-                  <ListField label="Destination" value={operation.destinationLocationName ?? "—"} />
-                  <ListField label="Lines" value={String(operation.lineCount ?? operation.lines?.length ?? "—")} />
-                  <ListField label="Responsible" value={operation.createdByName ?? "—"} />
-                </dl>
-              </Link>
-            ))}
-          </div>
+                </thead>
+                <tbody>
+                  {operations.data.items.map((operation: Operation) => (
+                    <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
+                      <td className="px-3 py-3 font-mono text-sm">
+                        <Link className="font-medium text-primary hover:underline" href={`/operations/${kind}/${operation.id}`}>{operation.reference}</Link>
+                      </td>
+                      <td className="px-3 py-3 text-sm">{operation.partnerName ?? "—"}</td>
+                      <td className="px-3 py-3 text-sm">{operation.sourceLocationName ?? "—"}</td>
+                      <td className="px-3 py-3 text-sm">{operation.destinationLocationName ?? "—"}</td>
+                      <td className="px-3 py-3 text-sm">{formatDateTime(operation.scheduleDate)}</td>
+                      <td className="px-3 py-3 text-sm">{operation.lineCount ?? operation.lines?.length ?? "—"}</td>
+                      <td className="px-3 py-3"><StatusBadge status={operation.status} /></td>
+                      <td className="px-3 py-3 text-sm">{operation.createdByName ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="grid gap-3 md:hidden">
+              {operations.data.items.map((operation: Operation) => (
+                <Link key={operation.id} href={`/operations/${kind}/${operation.id}`} className="rounded-lg border border-border p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <span className="truncate font-mono text-sm font-medium text-primary">{operation.reference}</span>
+                    <StatusBadge status={operation.status} />
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <ListField label="Contact" value={operation.partnerName ?? "—"} />
+                    <ListField label="Schedule date" value={formatDateTime(operation.scheduleDate)} />
+                    <ListField label="Source" value={operation.sourceLocationName ?? "—"} />
+                    <ListField label="Destination" value={operation.destinationLocationName ?? "—"} />
+                    <ListField label="Lines" value={String(operation.lineCount ?? operation.lines?.length ?? "—")} />
+                    <ListField label="Responsible" value={operation.createdByName ?? "—"} />
+                  </dl>
+                </Link>
+              ))}
+            </div>
           </>
         )}
       </RoutePanel>

@@ -139,14 +139,26 @@
   - *Test:* `tests/test_reference_api.py` verifies list with nested locations, search, warehouse creation with unique code, 404 on missing warehouse, location creation with unique code per warehouse, 403 on staff attempt, and 409 on duplicate code.
 - [x] **KUN-013 · Partners endpoint** — `GET /partners?kind=&search=`, `POST /partners` with manager RBAC and kind validation
   - *Test:* `tests/test_reference_api.py` verifies partner list, kind filtering (supplier/customer including both), search query filtering, 201 creation, and 422 on invalid kind.
+- [x] **KUN-014 · Products CRUD** — `GET /products`, `POST /products`, `GET /products/{id}`, `PATCH /products/{id}`, `GET /products/{id}/availability`
+  - *Test:* `tests/test_products_and_operations_api.py` verifies manager 201 creation, 403 on staff attempt, 409 on duplicate SKU, initial stock creation via adjustment move, GET with search/category/stockState filtering, PATCH updates, and location availability.
+- [x] **KUN-015 · StockBalance model + free-to-use calculation** — unique `(product_id, location_id)`, `on_hand_quantity >= 0`
+  - *Test:* `tests/test_products_and_operations_api.py` verifies free-to-use = on_hand − reserved by waiting/ready deliveries, unreserved draft deliveries, cumulative reservations, and reservation release upon delivery cancellation.
+- [x] **KUN-016 · Operations CRUD + state machine** — `GET /operations`, `POST /operations`, `GET /operations/{id}`, `PATCH /operations/{id}`, `POST /operations/{id}/ready`, `POST /operations/{id}/validate`, `POST /operations/{id}/cancel`
+  - *Test:* `tests/test_products_and_operations_api.py` verifies receipt/transfer/adjustment draft → ready → done, delivery draft → waiting ↔ ready → done with short quantity detection, cancellation from draft/waiting/ready, 409 conflict when editing or canceling done operations, and idempotent validate.
+- [x] **KUN-017 · Reference generator** — `WH/IN/0001`, `WH/OUT/0001`, `WH/INT/0001`, `WH/ADJ/0001` per warehouse+direction sequence
+  - *Test:* Verified in `tests/test_products_and_operations_api.py` for all 4 operation types.
+- [x] **KUN-018 · Stock validation service** — atomic receipt/delivery/transfer/adjustment posting, no negative stock, idempotent validate
+  - *Test:* Verified in `tests/test_products_and_operations_api.py`.
 
 ### In Progress 🔄
 
+- [-] **KUN-019 · Ledger / moves endpoint** & **KUN-020 · Dashboard aggregation endpoint**
 - [-] **KUN-014 · Products CRUD** — live catalog + availability; `initialStock` field accepted but not posted to ledger/adjustment yet
 - [-] **KUN-016 · Operations CRUD + state machine** — create/read/ready/validate/cancel live; `PATCH /operations/{id}` still missing
 - [-] **KUN-024 · Dashboard filter and pagination support** — dashboard + filters live; list APIs still capped at 50 rows without cursor pagination
 
 ### Todo 📋
+
 
 #### Products + balances
 
@@ -156,6 +168,12 @@
   - *Test:* Free-to-use = on_hand − reserved by waiting/ready deliveries for same product/location.
 
 #### Operations + ledger
+
+- [ ] **KUN-019 · Ledger / moves endpoint** — `GET /moves` immutable list
+  - *Test:* Every validated operation creates one `StockMove` row per line; no update/delete endpoint exists.
+- [ ] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` with receipt/delivery summaries, low stock, recent operations
+  - *Test:* KPIs match underlying lists; isLate computed correctly.
+
 
 - [ ] **KUN-016 · Operations CRUD + state machine** — add `PATCH /operations/{id}` for draft edits
   - *Test:* Draft receipt/delivery/adjustment lines can be edited before ready.

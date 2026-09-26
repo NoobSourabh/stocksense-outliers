@@ -7,7 +7,7 @@ Supports the delivery waiting state per v2 blueprint.
 """
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +43,14 @@ _DIRECTION_MAP = {
 }
 
 
+def _normalize_schedule_datetime(val: datetime | date | None) -> datetime | None:
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val if val.tzinfo else val.replace(tzinfo=timezone.utc)
+    return datetime.combine(val, time(0, 0), tzinfo=timezone.utc)
+
+
 async def create_stock_operation(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -50,7 +58,7 @@ async def create_stock_operation(
     partner_id: str | None,
     source_location_id: str | None,
     destination_location_id: str | None,
-    schedule_date: date | None,
+    schedule_date: datetime | date | None,
     note: str | None,
     lines: list[dict],
 ) -> StockOperation:
@@ -120,7 +128,7 @@ async def create_stock_operation(
         partner_id=p_id,
         source_location_id=src_id,
         destination_location_id=dst_id,
-        schedule_date=schedule_date,
+        schedule_date=_normalize_schedule_datetime(schedule_date),
         note=note,
         created_by=user_id,
     )
@@ -186,7 +194,7 @@ async def mark_ready(db: AsyncSession, operation_id: uuid.UUID) -> StockOperatio
         # Check free-to-use for each line — never hard error, use waiting
         any_short = False
         for line in op.lines:
-            free = await get_free_to_use_at_location(db, line.product_id, op.source_location_id)
+            free = await get_free_to_use_at_location(db, line.product_id, op.source_location_id, exclude_operation_id=op.id)
             if line.quantity > free:
                 any_short = True
                 # is_short is computed at response time, not stored
@@ -356,5 +364,79 @@ async def cancel_operation(db: AsyncSession, operation_id: uuid.UUID, reason: st
     op.updated_at = now
     if reason:
         op.note = (op.note or "") + f"\n[Canceled] {reason}"
+    await db.flush()
+    return op
+
+
+async def update_operation(
+    db: AsyncSession,
+    operation_id: uuid.UUID,
+    partner_id: str | None = None,
+    source_location_id: str | None = None,
+    destination_location_id: str | None = None,
+    schedule_date: datetime | date | None = None,
+    note: str | None = None,
+    lines: list[dict] | None = None,
+) -> StockOperation:
+    """
+    Update a draft or waiting operation.
+    Done or canceled operations cannot be edited.
+    """
+    op = await get_operation_by_id(db, operation_id)
+    if not op:
+        raise NotFoundError("Operation", str(operation_id))
+
+    if op.status in (OperationStatus.DONE, OperationStatus.CANCELED):
+        raise ConflictError("INVALID_STATE", f"Cannot edit an operation in {op.status.value} status")
+
+    if partner_id is not None:
+        op.partner_id = uuid.UUID(partner_id) if partner_id else None
+    if source_location_id is not None:
+        src_id = uuid.UUID(source_location_id) if source_location_id else None
+        if src_id:
+            loc = await get_location_by_id(db, src_id)
+            if not loc:
+                raise NotFoundError("Location", str(src_id))
+        op.source_location_id = src_id
+    if destination_location_id is not None:
+        dst_id = uuid.UUID(destination_location_id) if destination_location_id else None
+        if dst_id:
+            loc = await get_location_by_id(db, dst_id)
+            if not loc:
+                raise NotFoundError("Location", str(dst_id))
+        op.destination_location_id = dst_id
+    if schedule_date is not None:
+        op.schedule_date = _normalize_schedule_datetime(schedule_date)
+    if note is not None:
+        op.note = note
+
+    if lines is not None:
+        op.lines.clear()
+        for i, line_data in enumerate(lines):
+            prod_id = uuid.UUID(line_data["product_id"])
+            product = await get_product_by_id(db, prod_id)
+            if not product:
+                raise NotFoundError("Product", line_data["product_id"])
+
+            qty = Decimal(line_data.get("quantity", "0"))
+            counted_qty_str = line_data.get("counted_quantity")
+            counted_qty = Decimal(counted_qty_str) if counted_qty_str else None
+
+            if op.type != OperationType.ADJUSTMENT and qty <= 0:
+                raise ValidationError(
+                    "Quantity must be positive",
+                    {f"lines.{i}.quantity": "Must be > 0"},
+                )
+
+            op_line = OperationLine(
+                product_id=prod_id,
+                quantity=qty,
+                counted_quantity=counted_qty,
+                reason=line_data.get("reason"),
+            )
+            op.lines.append(op_line)
+
+    now = datetime.now(timezone.utc)
+    op.updated_at = now
     await db.flush()
     return op
