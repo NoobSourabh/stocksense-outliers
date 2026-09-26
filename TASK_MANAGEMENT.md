@@ -158,18 +158,17 @@
 - [x] **KUN-024 · Dashboard filter, aggregate and pagination support** — cursor pagination and accurate total counts for `/operations`, `/moves`, and `/products`
   - *Test:* `tests/test_pagination_api.py` verifies cursor encoding/decoding and multi-page traversals across operations, moves, and products.
 
+- [x] **KUN-021 · Deterministic seed script** — demo users Maya/Arjun, warehouses/locations, products with starting balances, waiting delivery
+- [x] **KUN-022 · Health endpoint** — `GET /health` returns API + DB status
+- [x] **KUN-023 · Deploy backend** — Docker, Render Blueprint (`render.yaml`), Railway configuration (`railway.json`), Procfile, and startup script with auto-migrations and documentation in `docs/DEPLOYMENT.md`
+
 ### In Progress 🔄
 
-- [-] **KUN-023 · Deploy backend** — prepare production deployment config / env vars
+*None — all assigned backend tasks (KUN-001 through KUN-024) are complete!*
 
 ### Todo 📋
 
-#### Seed + deploy
-
-- [x] **KUN-021 · Deterministic seed script** — demo users Maya/Arjun, warehouses/locations, products with starting balances, waiting delivery
-- [x] **KUN-022 · Health endpoint** — `GET /health` returns API + DB status
-- [ ] **KUN-023 · Deploy backend** — Railway/Render with Postgres and env vars
-  - *Test:* Public health endpoint returns 200; frontend points to deployed URL.
+*All Kunal tasks complete.*
 
 ---
 
@@ -288,7 +287,7 @@
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 · 1:58 PM*
+*Last updated: Saturday, Sep 26, 2026 · 2:18 PM*
 *Sourabh next up: **SOUR-011** — wire settings create forms (warehouses + locations).*
-*Kunal next up: **KUN-023** — backend deployment configuration (Render/Railway).*
+*Kunal: **All tasks complete** (KUN-001 through KUN-024).*
 *Hardik next up: **HAR-009** responsive regression (pair with SOUR-012).*
