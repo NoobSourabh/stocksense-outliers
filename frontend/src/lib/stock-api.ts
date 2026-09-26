@@ -13,12 +13,20 @@ export interface ProductInput { name: string; sku: string; categoryId: string; u
 export interface OperationLine { id: string; productId: string; productName: string; productSku: string; quantity: string; countedQuantity?: string | null; previousQuantity?: string | null; delta?: string | null; reason?: string | null; isShort: boolean }
 export interface Operation { id: string; reference: string; type: string; status: string; partnerId?: string | null; partnerName?: string | null; sourceLocationId?: string | null; sourceLocationName?: string | null; destinationLocationId?: string | null; destinationLocationName?: string | null; scheduleDate?: string | null; note?: string | null; createdByName?: string; createdAt?: string; lineCount?: number; isLate: boolean; lines?: OperationLine[] }
 export interface OperationInput { type: string; partnerId?: string | null; sourceLocationId?: string | null; destinationLocationId?: string | null; scheduleDate?: string | null; note?: string | null; lines: { productId: string; quantity: string; countedQuantity?: string; reason?: string }[] }
-export interface StockMove { id: string; operationId: string; reference: string; type: string; productId: string; productName: string; productSku: string; fromLocationName?: string | null; toLocationName?: string | null; quantity: string; signedDelta: string; actorName: string; reason?: string | null; occurredAt: string }
-export interface Dashboard { receiptSummary: { toReceive: number; late: number; total: number }; deliverySummary: { toDeliver: number; late: number; waiting: number; total: number }; lowStock: { productId: string; productName: string; sku: string; onHand: string; reorderPoint: string; unit: string }[]; recentOperations: Operation[] }
+export interface StockMove { id: string; operationId: string; reference: string; type: string; productId: string; productName: string; productSku: string; partnerName?: string | null; fromLocationName?: string | null; toLocationName?: string | null; quantity: string; signedDelta: string; actorName: string; reason?: string | null; occurredAt: string }
+export interface Dashboard { receiptSummary: { toReceive: number; late: number; total: number }; deliverySummary: { toDeliver: number; late: number; waiting: number; total: number }; lowStock: { productId: string; productName: string; sku: string; onHand: string; reorderPoint: string; unit: string }[]; recentOperations: Operation[]; activeProductCount: number; scheduledTransfers: number }
+export interface OperationFilters {
+  type?: string;
+  status?: string;
+  warehouseId?: string;
+  locationId?: string;
+  categoryId?: string;
+  search?: string;
+}
 
-function queryString(values: Record<string, string | undefined>): string {
+function queryString(values: object): string {
   const params = new URLSearchParams();
-  Object.entries(values).forEach(([key, value]) => { if (value) params.set(key, value); });
+  Object.entries(values).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== "") params.set(key, String(value)); });
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -28,17 +36,22 @@ export const stockApi = {
   signup: (input: { loginId: string; name: string; email: string; password: string; confirmPassword: string }) => apiFetch<AuthResult>("/auth/signup", { method: "POST", body: input }),
   logout: () => apiFetch<{ ok: boolean }>("/auth/logout", { method: "POST" }),
   me: () => apiFetch<AuthResult>("/auth/me", { auth: true }),
-  dashboard: () => apiFetch<Dashboard>("/dashboard", { auth: true }),
-  products: (search = "") => apiFetch<Page<Product>>(`/products${queryString({ search })}`, { auth: true }),
+  dashboard: (filters: OperationFilters = {}) => apiFetch<Dashboard>(`/dashboard${queryString(filters)}`, { auth: true }),
+  products: (search = "", categoryId?: string) => apiFetch<Page<Product>>(`/products${queryString({ search, categoryId })}`, { auth: true }),
   product: (id: string) => apiFetch<Product>(`/products/${encodeURIComponent(id)}`, { auth: true }),
   createProduct: (body: ProductInput) => apiFetch<Product>("/products", { method: "POST", body, auth: true }),
   updateProduct: (id: string, body: Partial<ProductInput>) => apiFetch<Product>(`/products/${encodeURIComponent(id)}`, { method: "PATCH", body, auth: true }),
-  categories: () => apiFetch<Page<Category>>("/categories", { auth: true }),
-  warehouses: (includeLocations = true) => apiFetch<Page<Warehouse>>(`/warehouses${queryString({ includeLocations: includeLocations ? "true" : undefined })}`, { auth: true }),
+  categories: (search?: string | unknown) => apiFetch<Page<Category>>(`/categories${typeof search === "string" && search ? queryString({ search }) : ""}`, { auth: true }),
+  createCategory: (body: { code: string; name: string }) => apiFetch<Category>("/categories", { method: "POST", body, auth: true }),
+  warehouses: (includeLocations = true, search?: string) => apiFetch<Page<Warehouse>>(`/warehouses${queryString({ includeLocations: includeLocations ? "true" : undefined, search })}`, { auth: true }),
+  createWarehouse: (body: { code: string; name: string; address?: string | null }) => apiFetch<Warehouse>("/warehouses", { method: "POST", body, auth: true }),
+  createLocation: (warehouseId: string, body: { code: string; name: string; kind: string }) => apiFetch<Location>(`/warehouses/${encodeURIComponent(warehouseId)}/locations`, { method: "POST", body, auth: true }),
   partners: (kind?: string, search?: string) => apiFetch<Page<Partner>>(`/partners${queryString({ kind, search })}`, { auth: true }),
-  operations: (filters: { type?: string; status?: string; search?: string } = {}) => apiFetch<Page<Operation>>(`/operations${queryString(filters)}`, { auth: true }),
+  createPartner: (body: { name: string; kind: string }) => apiFetch<Partner>("/partners", { method: "POST", body, auth: true }),
+  operations: (filters: OperationFilters = {}) => apiFetch<Page<Operation>>(`/operations${queryString(filters)}`, { auth: true }),
   operation: (id: string) => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}`, { auth: true }),
   createOperation: (body: OperationInput) => apiFetch<Operation>("/operations", { method: "POST", body, auth: true }),
+  updateOperation: (id: string, body: Partial<OperationInput>) => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}`, { method: "PATCH", body, auth: true }),
   operationAction: (id: string, action: "ready" | "validate" | "cancel") => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}/${action}`, { method: "POST", auth: true }),
-  moves: (filters: { type?: string; search?: string } = {}) => apiFetch<Page<StockMove>>(`/moves${queryString(filters)}`, { auth: true }),
+  moves: (filters: { type?: string; productId?: string; locationId?: string; fromDate?: string; toDate?: string; search?: string; limit?: number } = {}) => apiFetch<Page<StockMove>>(`/moves${queryString(filters)}`, { auth: true }),
 };

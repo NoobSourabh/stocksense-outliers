@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 export default function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const warehouses = useQuery({ queryKey: ["warehouses", true], queryFn: () => stockApi.warehouses(true) });
-  const warehouse = warehouses.data?.items.find((item) => item.locations.some((location) => location.id === id));
-  const location = warehouse?.locations.find((item) => item.id === id);
+  const warehouse = warehouses.data?.items.find((item) => item.locations?.some((location) => location.id === id));
+  const location = warehouse?.locations?.find((item) => item.id === id);
   return <RouteScaffold section="Settings / Locations" title={location?.name ?? "Location details"} description="View the location code, type, and parent warehouse.">
     <div className="mb-4"><Link href="/settings/locations" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to locations</Link></div>
     <RoutePanel title="Location profile" description="Location records are currently read-only in the available API.">

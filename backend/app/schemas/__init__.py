@@ -151,6 +151,17 @@ class PartnerCreateRequest(CamelModel):
 # Products
 # ---------------------------------------------------------------------------
 
+class CategoryBrief(CamelModel):
+    id: str
+    code: str
+    name: str
+
+
+class InitialStockRequest(CamelModel):
+    location_id: str = Field(alias="locationId")
+    quantity: str = "0"
+
+
 class ProductCreateRequest(CamelModel):
     name: str = Field(..., min_length=1, max_length=255)
     sku: str = Field(..., min_length=1, max_length=100)
@@ -158,7 +169,7 @@ class ProductCreateRequest(CamelModel):
     unit: str = Field(..., min_length=1, max_length=50)
     unit_cost: str = Field(alias="unitCost", default="0")
     reorder_point: str = Field(alias="reorderPoint", default="0")
-    initial_stock: str | None = Field(None, alias="initialStock")
+    initial_stock: InitialStockRequest | None = Field(None, alias="initialStock")
 
     @field_validator("reorder_point")
     @classmethod
@@ -188,6 +199,7 @@ class ProductUpdateRequest(CamelModel):
 
 class BalanceResponse(CamelModel):
     location_id: str = Field(alias="locationId")
+    location_code: str = Field("", alias="locationCode")
     location_name: str = Field(alias="locationName")
     warehouse_name: str = Field(alias="warehouseName")
     on_hand: str = Field(alias="onHand")
@@ -198,6 +210,7 @@ class ProductSummaryResponse(CamelModel):
     id: str
     name: str
     sku: str
+    category: CategoryBrief | None = None
     category_name: str = Field(alias="categoryName")
     unit: str
     unit_cost: str = Field(alias="unitCost")
@@ -212,6 +225,7 @@ class ProductDetailResponse(CamelModel):
     name: str
     sku: str
     category_id: str = Field(alias="categoryId")
+    category: CategoryBrief | None = None
     category_name: str = Field(alias="categoryName")
     unit: str
     unit_cost: str = Field(alias="unitCost")
@@ -220,6 +234,12 @@ class ProductDetailResponse(CamelModel):
     free_to_use_total: str = Field(alias="freeToUseTotal")
     is_active: bool = Field(alias="isActive")
     balances: list[BalanceResponse] = []
+
+
+class ProductAvailabilityResponse(CamelModel):
+    on_hand_total: str = Field(alias="onHandTotal")
+    free_to_use_total: str = Field(alias="freeToUseTotal")
+    locations: list[BalanceResponse] = []
 
 
 # ---------------------------------------------------------------------------
@@ -239,9 +259,22 @@ class OperationCreateRequest(CamelModel):
     partner_id: str | None = Field(None, alias="partnerId")
     source_location_id: str | None = Field(None, alias="sourceLocationId")
     destination_location_id: str | None = Field(None, alias="destinationLocationId")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     note: str | None = None
     lines: list[OperationLineRequest] = Field(..., min_length=1)
+
+
+class OperationUpdateRequest(CamelModel):
+    partner_id: str | None = Field(None, alias="partnerId")
+    source_location_id: str | None = Field(None, alias="sourceLocationId")
+    destination_location_id: str | None = Field(None, alias="destinationLocationId")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
+    note: str | None = None
+    lines: list[OperationLineRequest] | None = None
+
+
+class OperationCancelRequest(CamelModel):
+    reason: str | None = None
 
 
 class OperationLineResponse(CamelModel):
@@ -249,6 +282,7 @@ class OperationLineResponse(CamelModel):
     product_id: str = Field(alias="productId")
     product_name: str = Field(alias="productName")
     product_sku: str = Field(alias="productSku")
+    partner_name: str | None = Field(None, alias="partnerName")
     quantity: str
     counted_quantity: str | None = Field(None, alias="countedQuantity")
     previous_quantity: str | None = Field(None, alias="previousQuantity")
@@ -265,7 +299,7 @@ class OperationSummaryResponse(CamelModel):
     partner_name: str | None = Field(None, alias="partnerName")
     source_location_name: str | None = Field(None, alias="sourceLocationName")
     destination_location_name: str | None = Field(None, alias="destinationLocationName")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     created_by_name: str = Field(alias="createdByName")
     created_at: datetime = Field(alias="createdAt")
     line_count: int = Field(alias="lineCount")
@@ -283,7 +317,7 @@ class OperationDetailResponse(CamelModel):
     source_location_name: str | None = Field(None, alias="sourceLocationName")
     destination_location_id: str | None = Field(None, alias="destinationLocationId")
     destination_location_name: str | None = Field(None, alias="destinationLocationName")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     note: str | None = None
     created_by: str = Field(alias="createdBy")
     created_by_name: str = Field(alias="createdByName")
@@ -349,6 +383,8 @@ class DashboardResponse(CamelModel):
     delivery_summary: DeliverySummaryResponse = Field(alias="deliverySummary")
     low_stock: list[LowStockItem] = Field(alias="lowStock")
     recent_operations: list[OperationSummaryResponse] = Field(alias="recentOperations")
+    active_product_count: int = Field(alias="activeProductCount")
+    scheduled_transfers: int = Field(alias="scheduledTransfers")
 
 
 # ---------------------------------------------------------------------------

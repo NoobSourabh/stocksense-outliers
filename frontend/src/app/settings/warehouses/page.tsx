@@ -1,83 +1,54 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { stockApi } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { showCreateSuccessToast, showErrorToast } from "@/lib/toast-utils";
 import { SkeletonTable } from "@/components/skeleton-table";
 import { EmptyState } from "@/components/empty-state";
-import { Badge } from "@/components/ui/badge";
 
 export default function WarehousesPage() {
-  const warehouses = useQuery({
-    queryKey: ["warehouses", true],
-    queryFn: () => stockApi.warehouses(true),
+  const queryClient = useQueryClient();
+  const warehouses = useQuery({ queryKey: ["warehouses", true], queryFn: () => stockApi.warehouses(true) });
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const create = useMutation({
+    mutationFn: () => stockApi.createWarehouse({ code: code.trim(), name: name.trim(), address: address.trim() || null }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["warehouses"] }),
+        queryClient.invalidateQueries({ queryKey: ["locations"] }),
+      ]);
+      setCode("");
+      setName("");
+      setAddress("");
+      showCreateSuccessToast("Warehouse");
+    },
+    onError: (error) => showErrorToast(error, "Could not create warehouse"),
   });
 
-  return (
-    <RouteScaffold
-      section="Settings"
-      title="Warehouses"
-      description="Review warehouse identities, addresses, and associated stock locations."
-    >
-      <RoutePanel
-        title="Warehouse directory"
-        description="Warehouse codes and location memberships are managed by the inventory service."
-      >
-        {warehouses.isPending ? (
-          <div className="py-2">
-            <SkeletonTable columns={5} rows={4} showSearch={false} showPagination={false} />
-          </div>
-        ) : warehouses.isError ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
-            <AlertCircle className="size-10 text-destructive mb-3" />
-            <h3 className="text-base font-semibold text-destructive">Failed to load warehouses</h3>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Unable to connect to the warehouse configuration service.
-            </p>
-            <Button variant="outline" className="mt-4" onClick={() => void warehouses.refetch()}>
-              Try Again
-            </Button>
-          </div>
-        ) : warehouses.data.items.length === 0 ? (
-          <EmptyState
-            title="No warehouses configured"
-            description="No warehouse facilities have been set up in the system."
-          />
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[680px] text-left">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  {["Name", "Short code", "Address", "Locations", "Status"].map((heading) => (
-                    <th key={heading} className="px-4 py-3 font-medium">
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {warehouses.data.items.map((warehouse) => (
-                  <tr key={warehouse.id} className="transition-colors hover:bg-muted/50">
-                    <td className="px-4 py-3 text-sm font-medium text-foreground">{warehouse.name}</td>
-                    <td className="px-4 py-3 font-mono text-sm text-muted-foreground">{warehouse.code}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{warehouse.address ?? "—"}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      <span className="font-mono font-medium text-foreground">{warehouse.locations.length}</span> locations
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <Badge variant={warehouse.isActive ? "default" : "secondary"}>
-                        {warehouse.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    create.mutate();
+  }
+
+  return <RouteScaffold section="Settings" title="Warehouses" description="Review warehouse identities, addresses, and associated stock locations.">
+    <form onSubmit={submit}>
+      <RoutePanel title="Create warehouse" description="Add a warehouse to the inventory directory.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="grid gap-1.5 text-sm font-medium">Short code<Input value={code} onChange={(event) => setCode(event.target.value)} required maxLength={50} pattern=".*\\S.*" title="Enter a code with at least one non-space character." className="h-10 bg-background text-sm font-normal" /></label>
+          <label className="grid gap-1.5 text-sm font-medium">Warehouse name<Input value={name} onChange={(event) => setName(event.target.value)} required maxLength={255} pattern=".*\\S.*" title="Enter a name with at least one non-space character." className="h-10 bg-background text-sm font-normal" /></label>
+          <label className="grid gap-1.5 text-sm font-medium">Address <span className="font-normal text-muted-foreground">Optional</span><Input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={500} className="h-10 bg-background text-sm font-normal" /></label>
+        </div>
+        <div className="mt-5 flex justify-end"><Button type="submit" disabled={create.isPending}>{create.isPending ? "Creating…" : "Create warehouse"}</Button></div>
       </RoutePanel>
-    </RouteScaffold>
-  );
+    </form>
+    <RoutePanel title="Warehouse directory" description="Warehouse codes and location memberships are managed by the inventory service.">
+      {warehouses.isPending ? <div className="py-2"><SkeletonTable columns={5} rows={6} showSearch={false} showPagination={false} /></div> : warehouses.isError ? <div className="grid justify-items-center gap-3 py-12"><p className="text-sm text-destructive">Couldn’t load warehouses.</p><Button variant="outline" onClick={() => void warehouses.refetch()}>Retry</Button></div> : warehouses.data.items.length === 0 ? <EmptyState title="No warehouses configured" description="Create a warehouse above to begin setting up stock locations." /> : <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left"><thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Name", "Short code", "Address", "Locations", "Status"].map((heading) => <th key={heading} className="px-3 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{warehouses.data.items.map((warehouse) => <tr key={warehouse.id} className="border-b border-border/70 last:border-0"><td className="px-3 py-3 text-sm font-medium">{warehouse.name}</td><td className="px-3 py-3 font-mono text-sm">{warehouse.code}</td><td className="px-3 py-3 text-sm">{warehouse.address ?? "—"}</td><td className="px-3 py-3 text-sm">{warehouse.locations?.length ?? 0}</td><td className="px-3 py-3 text-sm">{warehouse.isActive ? "Active" : "Inactive"}</td></tr>)}</tbody></table></div>}
+    </RoutePanel>
+  </RouteScaffold>;
 }

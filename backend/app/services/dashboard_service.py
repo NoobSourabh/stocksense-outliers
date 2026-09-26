@@ -6,15 +6,17 @@ per the v2 blueprint dashboard shape.
 """
 
 from datetime import date
+from uuid import UUID
+from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import OperationStatus, OperationType
 from app.repositories import (
-    get_delivery_summary,
-    get_receipt_summary,
+    count_active_dashboard_products,
+    count_dashboard_operations,
     list_low_stock_products,
-    list_operations,
+    list_dashboard_operations,
 )
 from app.schemas import (
     DashboardResponse,
@@ -26,34 +28,49 @@ from app.schemas import (
 
 
 def _is_late(op) -> bool:
-    """Schedule date < today and not done/canceled."""
+    """Schedule date < now/today and not done/canceled."""
     if op.schedule_date is None:
         return False
     if op.status in (OperationStatus.DONE, OperationStatus.CANCELED):
         return False
+    if isinstance(op.schedule_date, datetime):
+        sched = op.schedule_date if op.schedule_date.tzinfo else op.schedule_date.replace(tzinfo=timezone.utc)
+        return sched < datetime.now(timezone.utc)
     return op.schedule_date < date.today()
 
 
-async def get_dashboard(db: AsyncSession) -> DashboardResponse:
+async def get_dashboard(
+    db: AsyncSession,
+    op_type: OperationType | None = None,
+    status: OperationStatus | None = None,
+    warehouse_id: UUID | None = None,
+    location_id: UUID | None = None,
+    category_id: UUID | None = None,
+) -> DashboardResponse:
     """Build the full dashboard payload with receipt/delivery summary cards."""
-    # Summary cards
-    receipt_data = await get_receipt_summary(db)
-    delivery_data = await get_delivery_summary(db)
+    filters = (op_type, status, warehouse_id, location_id, category_id)
+    counts = await count_dashboard_operations(db, *filters)
+    receipt_data = counts.get(OperationType.RECEIPT.value, {"open": 0, "late": 0, "total": 0})
+    delivery_data = counts.get(OperationType.DELIVERY.value, {"open": 0, "late": 0, "waiting": 0, "total": 0})
 
     receipt_summary = ReceiptSummaryResponse(
-        toReceive=receipt_data["to_receive"],
+        toReceive=receipt_data["open"],
         late=receipt_data["late"],
         total=receipt_data["total"],
     )
     delivery_summary = DeliverySummaryResponse(
-        toDeliver=delivery_data["to_deliver"],
+        toDeliver=delivery_data["open"],
         late=delivery_data["late"],
         waiting=delivery_data["waiting"],
         total=delivery_data["total"],
     )
 
-    # Low stock list
-    low_stock_items = await list_low_stock_products(db)
+    low_stock_items = await list_low_stock_products(
+        db,
+        warehouse_id=warehouse_id,
+        location_id=location_id,
+        category_id=category_id,
+    )
     low_stock = [
         LowStockItem(
             productId=str(item["product"].id),
@@ -66,8 +83,7 @@ async def get_dashboard(db: AsyncSession) -> DashboardResponse:
         for item in low_stock_items
     ]
 
-    # Recent operations (last 10)
-    recent_ops = await list_operations(db, limit=10)
+    recent_ops = await list_dashboard_operations(db, *filters, limit=10)
     recent = [
         OperationSummaryResponse(
             id=str(op.id),
@@ -91,4 +107,6 @@ async def get_dashboard(db: AsyncSession) -> DashboardResponse:
         deliverySummary=delivery_summary,
         lowStock=low_stock,
         recentOperations=recent,
+        activeProductCount=await count_active_dashboard_products(db),
+        scheduledTransfers=counts.get(OperationType.TRANSFER.value, {}).get("open", 0),
     )

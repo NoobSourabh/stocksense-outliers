@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
+import { WarehouseHeader } from "@/components/warehouse/warehouse-header";
 import {
   Search,
   Plus,
@@ -312,6 +313,7 @@ export function DeliveryDetailClient({ deliveryId }: { deliveryId: string }) {
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-800 dark:text-slate-100 bg-[#f8fafc] dark:bg-slate-900 selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100 transition-colors">
+      <WarehouseHeader />
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transition-all animate-in fade-in slide-in-from-bottom-5 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700">
@@ -330,7 +332,7 @@ export function DeliveryDetailClient({ deliveryId }: { deliveryId: string }) {
       )}
 
       {/* BEGIN: Minimal Top Navigation Chrome */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 transition-colors">
+      <header className="hidden">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             {/* Left: Logo & Crisp Main Navigation */}

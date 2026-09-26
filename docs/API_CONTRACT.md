@@ -312,7 +312,6 @@ Product details with per-location stock balances.
 
 #### `GET /products/{id}/availability`
 Location-level availability calculation.
-- **Query Params**: `warehouseId` (optional UUID)
 - **Response (200 OK)**:
   ```json
   {
@@ -437,8 +436,9 @@ Immutable audit log of all stock movements.
   - `productId`: UUID
   - `type`: `receipt` | `delivery` | `transfer` | `adjustment`
   - `locationId`: UUID
-  - `from`: ISO date/timestamp
-  - `to`: ISO date/timestamp
+  - `fromDate`: ISO date
+  - `toDate`: ISO date (inclusive, interpreted through the end of that UTC day)
+  - `search`: reference, product name, SKU, or supplier/customer contact name
   - `limit`: integer
 - **Response (200 OK)**:
   ```json
@@ -470,7 +470,10 @@ Immutable audit log of all stock movements.
 
 #### `GET /dashboard`
 Provides consolidated operational metrics for KPI cards, delivery/receipt summaries, low stock warnings, and recent activity.
-- **Query Params**: `warehouseId` (optional UUID)
+- **Query Params**: `type`, `status`, `warehouseId`, `locationId`, and `categoryId` (all optional; combined filters apply to operation aggregates and recent operations; warehouse/location/category also scope low stock).
+- `receiptSummary.total` and `deliverySummary.total` are exact counts of all matching operations, including terminal statuses. `toReceive` / `toDeliver` count matching non-terminal operations; `late` counts matching non-terminal operations scheduled before today. `waiting` counts matching waiting deliveries.
+- `recentOperations` contains the 10 newest matches. KPI totals are computed separately and never inferred from this limited list.
+- `activeProductCount` is the active catalog product count; `scheduledTransfers` is the exact count of matching non-terminal transfers.
 - **Response (200 OK)**:
   ```json
   {
@@ -488,14 +491,16 @@ Provides consolidated operational metrics for KPI cards, delivery/receipt summar
     "lowStock": [
       {
         "productId": "uuid",
-        "name": "Steel Tube 20mm",
+        "productName": "Steel Tube 20mm",
         "sku": "RAW-STL-001",
         "onHand": "12.000",
         "reorderPoint": "50.000",
         "unit": "meter"
       }
     ],
-    "recentOperations": [ ... ]
+    "recentOperations": [ ... ],
+    "activeProductCount": 42,
+    "scheduledTransfers": 2
   }
   ```
 

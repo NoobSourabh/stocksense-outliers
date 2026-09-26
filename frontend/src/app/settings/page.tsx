@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@/components/theme-provider";
+import { WarehouseHeader } from "@/components/warehouse/warehouse-header";
 import {
   Sun,
   Moon,
@@ -178,10 +179,11 @@ export default function WarehouseDetailsMobilePage() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-200 pb-20 md:pb-12">
+      <WarehouseHeader />
       {/* ========================================================================= */}
       {/* 1. TOP APP BAR                                                            */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
+      <header className="hidden">
         <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
           {/* Brand Logo & Context */}
           <div className="flex items-center gap-2.5">
@@ -894,7 +896,7 @@ export default function WarehouseDetailsMobilePage() {
       {/* ========================================================================= */}
       {/* 5. MOBILE FIXED BOTTOM NAVIGATION BAR                                     */}
       {/* ========================================================================= */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 py-1.5 px-4 flex items-center justify-around shadow-lg">
+      <nav className="hidden">
         <Link
           href="/"
           className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-slate-500 hover:text-slate-900 transition-colors"

@@ -1,12 +1,12 @@
 """
 StockSense Backend - Operations API routes.
 
-GET /operations, POST /operations, GET /operations/{id},
+GET /operations, POST /operations, GET /operations/{id}, PATCH /operations/{id},
 POST /operations/{id}/ready, POST /operations/{id}/validate, POST /operations/{id}/cancel
 """
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,16 +17,19 @@ from app.db.session import get_db
 from app.models import OperationStatus, OperationType, User
 from app.repositories import get_free_to_use_at_location, get_operation_by_id, list_operations
 from app.schemas import (
+    OperationCancelRequest,
     OperationCreateRequest,
     OperationDetailResponse,
     OperationLineResponse,
     OperationSummaryResponse,
+    OperationUpdateRequest,
     PaginatedResponse,
 )
 from app.services.stock_service import (
     cancel_operation,
     create_stock_operation,
     mark_ready,
+    update_operation,
     validate_operation,
 )
 
@@ -38,6 +41,10 @@ def _is_late(op) -> bool:
         return False
     if op.status in (OperationStatus.DONE, OperationStatus.CANCELED):
         return False
+    now = datetime.now(timezone.utc)
+    if isinstance(op.schedule_date, datetime):
+        sched = op.schedule_date if op.schedule_date.tzinfo else op.schedule_date.replace(tzinfo=timezone.utc)
+        return sched < now
     return op.schedule_date < date.today()
 
 
@@ -68,7 +75,7 @@ async def _detail_response(op, db: AsyncSession | None = None) -> OperationDetai
             and op.source_location_id
             and op.status in (OperationStatus.DRAFT, OperationStatus.WAITING, OperationStatus.READY)
         ):
-            free = await get_free_to_use_at_location(db, line.product_id, op.source_location_id)
+            free = await get_free_to_use_at_location(db, line.product_id, op.source_location_id, exclude_operation_id=op.id)
             is_short = line.quantity > free
 
         lines.append(
@@ -116,12 +123,20 @@ async def _detail_response(op, db: AsyncSession | None = None) -> OperationDetai
 async def list_operations_route(
     type: str | None = Query(None),
     status: str | None = Query(None),
+    warehouse_id: uuid.UUID | None = Query(None, alias="warehouseId"),
     search: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> PaginatedResponse:
-    ops = await list_operations(db, op_type=type, status=status, search=search, limit=limit)
+    ops = await list_operations(
+        db,
+        op_type=type,
+        status=status,
+        warehouse_id=warehouse_id,
+        search=search,
+        limit=limit,
+    )
     items = [_summary_response(op) for op in ops]
     return PaginatedResponse(items=items, total=len(items))
 
@@ -159,44 +174,78 @@ async def create_operation_route(
 
 @router.get("/{operation_id}")
 async def get_operation_route(
-    operation_id: str,
+    operation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> OperationDetailResponse:
-    op = await get_operation_by_id(db, uuid.UUID(operation_id))
+    op = await get_operation_by_id(db, operation_id)
     if not op:
-        raise NotFoundError("Operation", operation_id)
+        raise NotFoundError("Operation", str(operation_id))
+    return await _detail_response(op, db)
+
+
+@router.patch("/{operation_id}")
+async def update_operation_route(
+    operation_id: uuid.UUID,
+    body: OperationUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dep),
+) -> OperationDetailResponse:
+    lines = None
+    if body.lines is not None:
+        lines = [
+            {
+                "product_id": line.product_id,
+                "quantity": line.quantity,
+                "counted_quantity": line.counted_quantity,
+                "reason": line.reason,
+            }
+            for line in body.lines
+        ]
+    op = await update_operation(
+        db,
+        operation_id=operation_id,
+        partner_id=body.partner_id,
+        source_location_id=body.source_location_id,
+        destination_location_id=body.destination_location_id,
+        schedule_date=body.schedule_date,
+        note=body.note,
+        lines=lines,
+    )
+    op = await get_operation_by_id(db, op.id)
     return await _detail_response(op, db)
 
 
 @router.post("/{operation_id}/ready")
 async def ready_route(
-    operation_id: str,
+    operation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> OperationDetailResponse:
-    op = await mark_ready(db, uuid.UUID(operation_id))
+    op = await mark_ready(db, operation_id)
     op = await get_operation_by_id(db, op.id)
     return await _detail_response(op, db)
 
 
 @router.post("/{operation_id}/validate")
 async def validate_route(
-    operation_id: str,
+    operation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> OperationDetailResponse:
-    op = await validate_operation(db, uuid.UUID(operation_id), current_user.id)
+    op = await validate_operation(db, operation_id, current_user.id)
     op = await get_operation_by_id(db, op.id)
     return await _detail_response(op, db)
 
 
 @router.post("/{operation_id}/cancel")
 async def cancel_route(
-    operation_id: str,
+    operation_id: uuid.UUID,
+    body: OperationCancelRequest | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> OperationDetailResponse:
-    op = await cancel_operation(db, uuid.UUID(operation_id))
+    reason = body.reason if body else None
+    op = await cancel_operation(db, operation_id, reason=reason)
     op = await get_operation_by_id(db, op.id)
     return await _detail_response(op, db)
