@@ -2,69 +2,115 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTheme } from "@/components/theme-provider";
-import { Sun, Moon, Menu, X as CloseIcon } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Menu,
+  X as CloseIcon,
+  QrCode,
+  SlidersHorizontal,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  ShoppingCart,
+  RotateCcw,
+  LayoutGrid,
+  Truck,
+  Package,
+  History,
+  Settings,
+  Sparkles,
+  MapPin,
+  MoreVertical,
+  Minus,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 
 export interface StockItem {
   id: string;
   name: string;
   sku: string;
-  category: "Desks" | "Tables" | "Chairs" | "Storage";
+  bay: string;
+  category: "Furniture" | "Hardware" | "Desks" | "Tables" | "Chairs" | "Storage";
   description: string;
   initials: string;
   unitCost: number;
   onHand: number;
   reserved: number;
   safetyThreshold: number;
+  targetStock: number;
+  auditStatus: string;
+  auditIcon: "check" | "time" | "alert";
+  isCritical?: boolean;
 }
 
 const INITIAL_STOCK: StockItem[] = [
   {
     id: "desk",
     name: "Desk",
-    sku: "[DESK001]",
-    category: "Desks",
+    sku: "DESK001",
+    bay: "Bay A-03",
+    category: "Furniture",
     description: "Ergonomic Solid Pine Office Desk",
     initials: "DK",
     unitCost: 3000,
     onHand: 50,
     reserved: 5,
     safetyThreshold: 20,
+    targetStock: 60,
+    auditStatus: "Matched ERP Count",
+    auditIcon: "check",
   },
   {
     id: "table",
     name: "Table",
-    sku: "[TBL002]",
-    category: "Tables",
+    sku: "TBL002",
+    bay: "Bay B-11",
+    category: "Furniture",
     description: "Industrial Solid Maple Conference Table",
     initials: "TB",
     unitCost: 3000,
     onHand: 50,
     reserved: 0,
     safetyThreshold: 15,
+    targetStock: 50,
+    auditStatus: "Verified today 09:30 AM",
+    auditIcon: "check",
   },
   {
     id: "chair",
     name: "Office Chair",
-    sku: "[CHR003]",
-    category: "Chairs",
+    sku: "CHR003",
+    bay: "Bay C-02",
+    category: "Furniture",
     description: "High-Back Breathable Mesh Task Chair",
     initials: "OC",
     unitCost: 1500,
     onHand: 80,
     reserved: 8,
     safetyThreshold: 30,
+    targetStock: 100,
+    auditStatus: "Next cycle count in 4 days",
+    auditIcon: "time",
   },
   {
     id: "cabinet",
     name: "Storage Cabinet",
-    sku: "[CAB004]",
-    category: "Storage",
+    sku: "CAB004",
+    bay: "Bay D-08",
+    category: "Hardware",
     description: "Heavy Duty 4-Tier Locking Steel Rack",
     initials: "SC",
     unitCost: 4500,
     onHand: 25,
     reserved: 5,
     safetyThreshold: 30,
+    targetStock: 50,
+    auditStatus: "Reorder point breached",
+    auditIcon: "alert",
+    isCritical: true,
   },
 ];
 
@@ -86,10 +132,9 @@ export default function StockInventoryPage() {
   // Core Data State
   const [stockList, setStockList] = useState<StockItem[]>(INITIAL_STOCK);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterMode, setFilterMode] = useState<"all" | "low" | "reserved">("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("All Categories");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeNavTab, setActiveNavTab] = useState<"dashboard" | "operations" | "stock" | "history" | "settings">("stock");
 
   // Quick Adjustment Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -101,10 +146,15 @@ export default function StockInventoryPage() {
   // Audit History Modal State
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<StockItem | null>(null);
+
+  // Barcode Scanner Modal State
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Movement logs state
   const [movementLogs, setMovementLogs] = useState<MovementLog[]>([
     {
       id: "LOG-901",
-      sku: "[DESK001]",
+      sku: "DESK001",
       productName: "Desk",
       timestamp: "Today, 09:30 AM",
       type: "CYCLE_ADJUST",
@@ -114,7 +164,7 @@ export default function StockInventoryPage() {
     },
     {
       id: "LOG-900",
-      sku: "[DESK001]",
+      sku: "DESK001",
       productName: "Desk",
       timestamp: "Yesterday, 04:15 PM",
       type: "DISPATCH_PICK",
@@ -124,7 +174,7 @@ export default function StockInventoryPage() {
     },
     {
       id: "LOG-899",
-      sku: "[CAB004]",
+      sku: "CAB004",
       productName: "Storage Cabinet",
       timestamp: "Sep 24, 02:00 PM",
       type: "DISPATCH_PICK",
@@ -134,7 +184,7 @@ export default function StockInventoryPage() {
     },
     {
       id: "LOG-898",
-      sku: "[CHR003]",
+      sku: "CHR003",
       productName: "Office Chair",
       timestamp: "Sep 23, 11:20 AM",
       type: "INBOUND_GRN",
@@ -177,24 +227,26 @@ export default function StockInventoryPage() {
   // Filtered stock list
   const filteredStock = useMemo(() => {
     return stockList.filter((item) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.sku.toLowerCase().includes(q) ||
+        item.bay.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q);
 
-      const matchesCategory =
-        selectedCategory === "All" || item.category === selectedCategory;
-
-      let matchesFilter = true;
-      if (filterMode === "low") {
-        matchesFilter = item.onHand <= item.safetyThreshold;
-      } else if (filterMode === "reserved") {
-        matchesFilter = item.reserved > 0;
+      let matchesCategory = true;
+      if (activeCategoryFilter === "Furniture") {
+        matchesCategory = item.category === "Furniture";
+      } else if (activeCategoryFilter === "Hardware") {
+        matchesCategory = item.category === "Hardware";
+      } else if (activeCategoryFilter === "Low Stock") {
+        matchesCategory = item.onHand <= item.safetyThreshold;
       }
 
-      return matchesSearch && matchesCategory && matchesFilter;
+      return matchesSearch && matchesCategory;
     });
-  }, [stockList, searchQuery, selectedCategory, filterMode]);
+  }, [stockList, searchQuery, activeCategoryFilter]);
 
   // Summary Metrics calculations
   const totalStockOnHand = useMemo(
@@ -232,11 +284,12 @@ export default function StockInventoryPage() {
       prev.map((item) => {
         if (item.id === itemId) {
           const newOnHand = Math.max(0, item.onHand + delta);
+          const isCrit = newOnHand <= item.safetyThreshold;
           triggerToast(
-            `${item.name}: count adjusted to ${newOnHand} pcs`,
+            `${item.name}: count updated to ${newOnHand} pcs`,
             "check_circle"
           );
-          return { ...item, onHand: newOnHand };
+          return { ...item, onHand: newOnHand, isCritical: isCrit };
         }
         return item;
       })
@@ -260,11 +313,16 @@ export default function StockInventoryPage() {
 
     setStockList((prev) =>
       prev.map((item) =>
-        item.id === editingItem.id ? { ...item, onHand: modalOnHand } : item
+        item.id === editingItem.id
+          ? {
+              ...item,
+              onHand: modalOnHand,
+              isCritical: modalOnHand <= item.safetyThreshold,
+            }
+          : item
       )
     );
 
-    // Append to movement logs
     const newLog: MovementLog = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       sku: editingItem.sku,
@@ -279,7 +337,7 @@ export default function StockInventoryPage() {
 
     setIsModalOpen(false);
     triggerToast(
-      `${editingItem.name} stock updated to ${modalOnHand} pcs [${modalAuditRef || "General"}]`,
+      `${editingItem.name} floor count set to ${modalOnHand} pcs [${modalAuditRef || "General"}]`,
       "sync"
     );
   };
@@ -292,11 +350,11 @@ export default function StockInventoryPage() {
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = "SKU,Product Name,Category,Unit Cost (INR),On Hand,Reserved,Free To Use,Safety Threshold\n";
+    const headers = "SKU,Product Name,Bay Location,Category,Unit Cost (INR),On Hand,Reserved,Free To Use,Safety Threshold\n";
     const rows = stockList
       .map(
         (i) =>
-          `"${i.sku}","${i.name}","${i.category}",${i.unitCost},${i.onHand},${i.reserved},${Math.max(0, i.onHand - i.reserved)},${i.safetyThreshold}`
+          `"${i.sku}","${i.name}","${i.bay}","${i.category}",${i.unitCost},${i.onHand},${i.reserved},${Math.max(0, i.onHand - i.reserved)},${i.safetyThreshold}`
       )
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
@@ -311,92 +369,82 @@ export default function StockInventoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-container-low text-on-surface antialiased transition-colors duration-200">
+    <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-200 pb-20 md:pb-12">
       {/* ========================================================================= */}
-      {/* 1. TOP HEADER / APP BAR                                                    */}
+      {/* 1. TOP HEADER                                                             */}
       {/* ========================================================================= */}
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-surface-container-high transition-colors">
-        <div className="h-16 w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-          {/* Left Brand & Navigation */}
-          <div className="flex items-center gap-6 xl:gap-8">
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-600 text-white shadow-sm">
-                <span className="material-symbols-outlined text-[20px]">
-                  precision_manufacturing
+      <header className="sticky top-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
+        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+          {/* Brand Header */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white shadow-xs">
+              <span className="material-symbols-outlined text-[20px]">
+                precision_manufacturing
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-base sm:text-lg tracking-tight text-slate-900 dark:text-white">
+                  NOVA
+                </span>
+                <span className="text-[11px] font-mono font-bold tracking-wider px-1 py-0.2 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300">
+                  ALPHA
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-lg sm:text-xl text-foreground tracking-tight">
-                  Nova Precision
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-primary-50 text-primary-700 dark:bg-primary-950/70 dark:text-primary-300 tracking-wide border border-primary-200/50 dark:border-primary-800/40">
-                  Warehouse Ops
-                </span>
-              </div>
+              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 leading-none">
+                WH-ALPHA-01
+              </span>
             </div>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden xl:flex items-center gap-1.5">
+            <nav className="hidden xl:flex items-center gap-1 ml-6">
               <a
                 href="#"
-                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container-low rounded-lg transition-colors"
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Dashboard
               </a>
-              <div className="relative group">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-1"
-                >
-                  Operations
-                  <span className="material-symbols-outlined text-[16px]">
-                    expand_more
-                  </span>
-                </button>
-              </div>
               <a
                 href="#"
-                aria-current="page"
-                className="px-3 py-1.5 text-sm font-medium transition-colors bg-primary-50 text-primary-700 dark:bg-primary-950/70 dark:text-primary-300 rounded-lg"
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+              >
+                Operations
+              </a>
+              <a
+                href="#"
+                className="px-3 py-1.5 text-sm font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg"
               >
                 Stock
               </a>
               <a
                 href="#"
-                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container-low rounded-lg transition-colors"
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Move History
               </a>
-              <div className="relative group">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container-low rounded-lg transition-colors flex items-center gap-1"
-                >
-                  Settings
-                  <span className="material-symbols-outlined text-[16px]">
-                    expand_more
-                  </span>
-                </button>
-              </div>
+              <a
+                href="#"
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+              >
+                Settings
+              </a>
             </nav>
           </div>
 
-          {/* Right Controls: Search, Notifications, Theme, User */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Search SKU Bar */}
+          {/* Right Controls */}
+          <div className="flex items-center gap-2">
+            {/* Desktop SKU Search */}
             <div className="relative hidden md:flex items-center w-60 lg:w-72">
-              <span className="material-symbols-outlined absolute left-2.5 text-[18px] text-muted-foreground pointer-events-none">
-                search
-              </span>
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
               <input
                 ref={searchInputRef}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search SKU / Reference..."
                 type="text"
-                className="w-full h-9 pl-9 pr-12 rounded-lg bg-surface-container text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-500 border border-surface-container-high transition-all"
+                className="w-full h-9 pl-9 pr-12 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700 transition-all"
               />
-              <kbd className="absolute right-2 px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground bg-surface-container-high rounded shadow-xs">
+              <kbd className="absolute right-2 px-1.5 py-0.5 text-[11px] font-mono text-slate-400 bg-slate-200 dark:bg-slate-700 rounded">
                 ⌘K
               </kbd>
             </div>
@@ -404,855 +452,601 @@ export default function StockInventoryPage() {
             {/* Notification Bell */}
             <button
               type="button"
-              onClick={() => triggerToast("2 new inbound deliveries scheduled for Rack Sector B", "notifications")}
-              className="relative p-2 rounded-lg text-muted-foreground hover:bg-surface-container-low hover:text-foreground transition-colors"
+              onClick={() => triggerToast("2 notifications: Inbound batch scheduled for Rack B", "notifications")}
+              className="relative p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title="Notifications"
             >
               <span className="material-symbols-outlined text-[20px]">
                 notifications
               </span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary-600 ring-2 ring-surface-container-lowest"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-slate-900"></span>
             </button>
 
-            {/* Dark / Light Mode Toggle */}
+            {/* Theme Toggle */}
             <button
               type="button"
               onClick={theme.toggleTheme}
-              className="p-2 rounded-lg text-muted-foreground hover:bg-surface-container-low hover:text-foreground transition-colors"
+              className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title="Toggle theme"
             >
               {theme.darkMode ? (
-                <Sun className="w-5 h-5 text-amber-400" />
+                <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
               ) : (
-                <Moon className="w-5 h-5" />
+                <Moon className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </button>
 
-            {/* User Profile */}
-            <div className="flex items-center gap-2 pl-1 border-l border-surface-container-high">
-              <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-mono text-sm font-semibold shadow-xs">
-                A
-              </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-sm font-medium text-foreground leading-none">
-                  Alex M.
-                </span>
-                <span className="text-xs font-mono text-muted-foreground leading-none mt-1">
-                  Warehouse Lead
-                </span>
-              </div>
+            {/* User Avatar Circle */}
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-mono text-sm font-semibold flex items-center justify-center shadow-xs">
+              A
             </div>
-
-            {/* Mobile Menu Hamburger */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 rounded-lg text-muted-foreground hover:bg-surface-container-low hover:text-foreground transition-colors"
-              aria-label="Toggle Navigation Menu"
-            >
-              {mobileMenuOpen ? <CloseIcon className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile Navigation Dropdown */}
-        {mobileMenuOpen && (
-          <div className="xl:hidden px-4 pt-2 pb-4 border-t border-surface-container-high bg-surface-container-lowest animate-in slide-in-from-top-2 duration-150">
-            <div className="relative flex items-center w-full mb-3">
-              <span className="material-symbols-outlined absolute left-2.5 text-[18px] text-muted-foreground">
-                search
-              </span>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search SKU / Reference..."
-                type="text"
-                className="w-full h-9 pl-9 pr-4 rounded-lg bg-surface-container text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 border border-surface-container-high"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <a
-                href="#"
-                className="px-3 py-2 text-sm text-muted-foreground hover:bg-surface-container-low rounded-lg"
-              >
-                Dashboard
-              </a>
-              <a
-                href="#"
-                className="px-3 py-2 text-sm font-medium bg-primary-50 text-primary-700 dark:bg-primary-950/70 dark:text-primary-300 rounded-lg"
-              >
-                Stock Inventory
-              </a>
-              <a
-                href="#"
-                className="px-3 py-2 text-sm text-muted-foreground hover:bg-surface-container-low rounded-lg"
-              >
-                Move History
-              </a>
-              <a
-                href="#"
-                className="px-3 py-2 text-sm text-muted-foreground hover:bg-surface-container-low rounded-lg"
-              >
-                Operations & Reorder
-              </a>
-              <a
-                href="#"
-                className="px-3 py-2 text-sm text-muted-foreground hover:bg-surface-container-low rounded-lg"
-              >
-                Warehouse Settings
-              </a>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN DASHBOARD CONTENT                                                 */}
+      {/* 2. MAIN CONTAINER                                                         */}
       {/* ========================================================================= */}
-      <main className="w-full pt-20 pb-16 min-h-[calc(100vh-4rem)]">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          {/* --------------------------------------------------------------------- */}
-          {/* Top Breadcrumb & Live Context Banner                                  */}
-          {/* --------------------------------------------------------------------- */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-lowest p-4 sm:p-5 rounded-xl shadow-sm border border-surface-container-high border-l-4 border-l-primary-600 transition-colors">
-            <div className="flex items-start sm:items-center gap-3">
-              <span className="p-2 rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400 shrink-0">
-                <span className="material-symbols-outlined text-[24px]">
-                  inventory_2
-                </span>
-              </span>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-                    Stock Inventory
-                  </h1>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                    Realtime Sync
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                  Node{" "}
-                  <span className="font-mono font-semibold text-foreground">
-                    WH-ALPHA-01
-                  </span>{" "}
-                  • Section Rack Sector B • Live physical &amp; unallocated counts
-                </p>
-              </div>
-            </div>
+      <main className="w-full max-w-[1560px] mx-auto px-3.5 sm:px-6 lg:px-8 pt-3 sm:pt-6 space-y-3.5 sm:space-y-6">
+        {/* Page Title & Realtime Badge */}
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Stock Inventory
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Live valuation &amp; warehouse reconciliation
+            </p>
+          </div>
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 uppercase shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+            Realtime Sync
+          </span>
+        </div>
 
-            {/* User Requirement Callout Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 rounded-lg text-xs font-mono font-medium text-amber-800 dark:text-amber-300 shrink-0 self-start sm:self-auto">
-              <span className="material-symbols-outlined text-[18px] text-amber-600">
-                verified
-              </span>
-              <span>Direct Stock Editing &amp; Reconciliation Enabled</span>
+        {/* Direct Stock Editing Notice Box */}
+        <div className="p-3 sm:p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 flex items-start gap-2.5 sm:gap-3">
+          <span className="p-1 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0 mt-0.5">
+            <Sparkles className="w-4 h-4" />
+          </span>
+          <div className="text-xs sm:text-sm">
+            <div className="font-semibold text-blue-900 dark:text-blue-200">
+              Direct Stock Editing &amp; Reconciliation Enabled
+            </div>
+            <div className="text-blue-700 dark:text-blue-400 text-xs mt-0.5">
+              Touch steppers to update floor counts instantly
             </div>
           </div>
+        </div>
 
-          {/* --------------------------------------------------------------------- */}
-          {/* KPI Metric Cards Grid (4 Cards)                                       */}
-          {/* --------------------------------------------------------------------- */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Total Stock On Hand */}
-            <div className="bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-sm border border-surface-container-high hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Total Stock On Hand
-                </span>
-                <span className="p-1.5 rounded-lg bg-surface-container text-muted-foreground">
-                  <span className="material-symbols-outlined text-[20px]">
-                    warehouse
-                  </span>
-                </span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-mono font-bold text-foreground">
-                  {totalStockOnHand.toLocaleString()}
-                </span>
-                <span className="text-sm text-muted-foreground">units</span>
-              </div>
-              <div className="mt-3 flex items-center gap-1.5 text-xs font-mono">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 font-medium">
-                  <span className="material-symbols-outlined text-[14px] mr-0.5">
-                    arrow_upward
-                  </span>
-                  +3.4%
-                </span>
-                <span className="text-muted-foreground">vs. last month</span>
-              </div>
+        {/* 4-KPI Metric Cards Grid (Adaptive 2x2 or 4-col) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Card 1: Stock On Hand */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Stock On Hand
+              </span>
+              <span className="text-blue-600 dark:text-blue-400">
+                <Package className="w-4 h-4" />
+              </span>
             </div>
-
-            {/* Total Valuation */}
-            <div className="bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-sm border border-surface-container-high hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Total Valuation
-                </span>
-                <span className="p-1.5 rounded-lg bg-surface-container text-muted-foreground">
-                  <span className="material-symbols-outlined text-[20px]">
-                    payments
-                  </span>
-                </span>
+            <div className="mt-1 sm:mt-2">
+              <div className="text-lg sm:text-2xl font-mono font-bold text-slate-900 dark:text-white">
+                {totalStockOnHand.toLocaleString()}
+                <span className="text-xs font-normal text-slate-500 ml-1">units</span>
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-mono font-bold text-foreground">
-                  ₹{(totalValuation * 200).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
-                <span>Based on current unit landing costs</span>
-              </div>
-            </div>
-
-            {/* Free to Allocate */}
-            <div className="bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-sm border border-surface-container-high hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Free to Use / Allocate
-                </span>
-                <span className="p-1.5 rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400">
-                  <span className="material-symbols-outlined text-[20px]">
-                    check_circle
-                  </span>
-                </span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-mono font-bold text-primary-600 dark:text-primary-400">
-                  {freeToAllocate.toLocaleString()}
-                </span>
-                <span className="text-sm text-muted-foreground">units</span>
-              </div>
-              <div className="mt-3 flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
-                <span>{totalReserved} units reserved for orders</span>
-              </div>
-            </div>
-
-            {/* Items Low on Stock */}
-            <div className="bg-surface-container-lowest rounded-xl p-4 sm:p-5 shadow-sm border border-surface-container-high hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Items Low on Stock
-                </span>
-                <span className="p-1.5 rounded-lg bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400">
-                  <span className="material-symbols-outlined text-[20px]">
-                    warning
-                  </span>
-                </span>
-              </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-mono font-bold text-red-600 dark:text-red-400">
-                  {lowStockCount}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  SKUs require reorder
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-1.5 text-xs font-mono">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-medium">
-                  Attention needed
-                </span>
-                <span className="text-muted-foreground">Reorder threshold &lt; 30</span>
+              <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-mono font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                +3.4% vs last mo
               </div>
             </div>
           </div>
 
-          {/* --------------------------------------------------------------------- */}
-          {/* Action Bar & Interactive Controls                                     */}
-          {/* --------------------------------------------------------------------- */}
-          <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-surface-container-high flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-            {/* Left: Search and Filters */}
-            <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <div className="relative flex-1 max-w-md">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]">
-                  search
-                </span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search product name, SKU, or batch..."
-                  className="w-full h-10 pl-10 pr-4 bg-surface-container rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-500 border border-surface-container-high transition-all"
-                />
+          {/* Card 2: Total Valuation */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Total Valuation
+              </span>
+              <span className="text-blue-600 dark:text-blue-400">
+                <span className="material-symbols-outlined text-[18px]">payments</span>
+              </span>
+            </div>
+            <div className="mt-1 sm:mt-2">
+              <div className="text-lg sm:text-2xl font-mono font-bold text-slate-900 dark:text-white">
+                ₹{(totalValuation * 200).toLocaleString("en-IN")}
               </div>
+              <div className="mt-1 text-[10px] sm:text-xs font-mono text-slate-400 dark:text-slate-500">
+                Landing cost base
+              </div>
+            </div>
+          </div>
 
-              {/* Filter by Status Pill */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextMode =
-                      filterMode === "all" ? "low" : filterMode === "low" ? "reserved" : "all";
-                    setFilterMode(nextMode);
-                    triggerToast(`Filter: ${nextMode.toUpperCase()}`, "filter_list");
-                  }}
-                  className={`h-10 px-3 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors border ${
-                    filterMode !== "all"
-                      ? "bg-primary-50 text-primary-700 border-primary-300 dark:bg-primary-950 dark:text-primary-300"
-                      : "bg-surface-container hover:bg-surface-container-high text-foreground border-surface-container-high"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    filter_list
-                  </span>
-                  <span>
-                    Filter: {filterMode === "all" ? "All" : filterMode === "low" ? "Low Stock" : "Reserved"}
-                  </span>
-                </button>
+          {/* Card 3: Free to Allocate */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Free to Allocate
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+              </span>
+            </div>
+            <div className="mt-1 sm:mt-2">
+              <div className="text-lg sm:text-2xl font-mono font-bold text-slate-900 dark:text-white">
+                {freeToAllocate.toLocaleString()}
+                <span className="text-xs font-normal text-slate-500 ml-1">units</span>
+              </div>
+              <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-mono font-medium bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                {totalReserved} reserved
+              </div>
+            </div>
+          </div>
 
-                {/* Category Dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowCategoryMenu(!showCategoryMenu)}
-                    className="h-10 px-3 bg-surface-container hover:bg-surface-container-high text-foreground border border-surface-container-high rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      category
+          {/* Card 4: Low Stock Alert */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Low Stock Alert
+              </span>
+              <span className="text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
+            </div>
+            <div className="mt-1 sm:mt-2">
+              <div className="text-lg sm:text-2xl font-mono font-bold text-red-600 dark:text-red-400">
+                {lowStockCount} SKUs
+              </div>
+              <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-mono font-medium bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300">
+                Threshold &lt; 30
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search, Barcode & Action Bar */}
+        <div className="flex items-center gap-2">
+          {/* Search SKU input with clear button */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search SKU, barcode or item..."
+              className="w-full h-10 pl-9 pr-9 bg-white dark:bg-slate-900 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Barcode Scanner Icon Button */}
+          <button
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs transition-colors shrink-0"
+            title="Scan Barcode / QR"
+          >
+            <QrCode className="w-5 h-5" />
+          </button>
+
+          {/* Reconcile Primary Button */}
+          <button
+            type="button"
+            onClick={() => openEditModal()}
+            className="h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>Reconcile</span>
+          </button>
+        </div>
+
+        {/* Category Filter Pills Track */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {[
+            { label: "All Categories (48)", key: "All Categories" },
+            { label: "Furniture (24)", key: "Furniture" },
+            { label: "Hardware (18)", key: "Hardware" },
+            { label: "! Low Stock (2)", key: "Low Stock", isAlert: true },
+          ].map((pill) => {
+            const isActive = activeCategoryFilter === pill.key;
+            return (
+              <button
+                key={pill.key}
+                type="button"
+                onClick={() => {
+                  setActiveCategoryFilter(pill.key);
+                  triggerToast(`Filter: ${pill.label}`, "filter_list");
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${
+                  isActive
+                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                    : pill.isAlert
+                    ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/70 dark:text-red-300 dark:border-red-900"
+                    : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50"
+                }`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Product Cards List (Matching attached Mobile Screen) */}
+        <div className="space-y-3">
+          {filteredStock.map((item) => {
+            const freeUnits = Math.max(0, item.onHand - item.reserved);
+            const isLowStock = item.onHand <= item.safetyThreshold;
+            const freePercent =
+              item.onHand > 0
+                ? Math.round((freeUnits / item.onHand) * 100)
+                : 0;
+
+            return (
+              <div
+                key={item.id}
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden transition-all hover:shadow-md"
+              >
+                {/* Critical Stock Warning Header Banner (if threshold breached) */}
+                {isLowStock && (
+                  <div className="px-3.5 py-1.5 bg-amber-50 dark:bg-amber-950/60 border-b border-amber-200 dark:border-amber-800/60 flex items-center justify-between text-xs font-mono">
+                    <span className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-semibold">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                      Low Stock Threshold Breached
                     </span>
-                    <span>Category: {selectedCategory}</span>
-                  </button>
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">
+                      Reorder Point: {item.safetyThreshold}
+                    </span>
+                  </div>
+                )}
 
-                  {showCategoryMenu && (
-                    <div className="absolute left-0 mt-1 w-44 bg-surface-container-lowest border border-surface-container-high rounded-xl shadow-lg z-30 py-1 text-sm animate-in fade-in zoom-in-95 duration-100">
-                      {["All", "Desks", "Tables", "Chairs", "Storage"].map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCategory(cat);
-                            setShowCategoryMenu(false);
-                            triggerToast(`Category set to ${cat}`, "category");
-                          }}
-                          className={`w-full text-left px-3.5 py-2 hover:bg-surface-container-low transition-colors ${
-                            selectedCategory === cat
-                              ? "font-semibold text-primary-600 bg-primary-50 dark:bg-primary-950/50"
-                              : "text-foreground"
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Main Actions */}
-            <div className="flex items-center gap-2.5 self-end lg:self-auto">
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="h-10 px-3.5 bg-surface-container hover:bg-surface-container-high text-foreground border border-surface-container-high rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors shadow-xs"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  file_download
-                </span>
-                <span>Export CSV</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => openEditModal()}
-                className="h-10 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all hover:shadow"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  add_circle
-                </span>
-                <span>+ Update Stock / Adjustment</span>
-              </button>
-            </div>
-          </div>
-
-          {/* --------------------------------------------------------------------- */}
-          {/* Inventory Data Table Container                                        */}
-          {/* --------------------------------------------------------------------- */}
-          <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container-high overflow-hidden">
-            {/* Visual status bar */}
-            <div className="px-4 sm:px-5 py-3 bg-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-container-high">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">
-                  Available Stock List
-                </span>
-                <span className="px-2 py-0.5 rounded text-xs font-mono font-medium bg-primary-100 text-primary-900 dark:bg-primary-950 dark:text-primary-300">
-                  {filteredStock.length} Active Lines
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-mono text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  Balanced
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  Allocations Pending
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                  Reorder Target Hit
-                </span>
-              </div>
-            </div>
-
-            {/* Desktop Table View (Hidden below 768px) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-surface-container text-muted-foreground font-mono text-xs uppercase tracking-wider h-11 border-b border-surface-container-high">
-                    <th className="py-2.5 px-5 font-medium" scope="col">
-                      Product / SKU
-                    </th>
-                    <th className="py-2.5 px-4 font-medium" scope="col">
-                      Per Unit Cost
-                    </th>
-                    <th className="py-2.5 px-4 font-medium" scope="col">
-                      On Hand
-                    </th>
-                    <th className="py-2.5 px-4 font-medium" scope="col">
-                      Free To Use
-                    </th>
-                    <th className="py-2.5 px-4 font-medium" scope="col">
-                      Availability Bar
-                    </th>
-                    <th className="py-2.5 px-5 font-medium text-right" scope="col">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-container-high text-sm text-foreground">
-                  {filteredStock.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-muted-foreground">
-                        <span className="material-symbols-outlined text-4xl mb-2 text-muted-foreground/60">
-                          inventory
+                <div className="p-3.5 sm:p-4 space-y-3">
+                  {/* Card Header: Product Name + SKU + Bay + Price + Menu */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-base text-slate-900 dark:text-white">
+                          {item.name}
                         </span>
-                        <p className="text-base font-medium">No matching inventory lines found</p>
-                        <p className="text-xs mt-1">Try adjusting your search query or filters.</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStock.map((item) => {
-                      const freeUnits = Math.max(0, item.onHand - item.reserved);
-                      const isLowStock = item.onHand <= item.safetyThreshold;
-                      const freePercent =
-                        item.onHand > 0
-                          ? Math.round((freeUnits / item.onHand) * 100)
-                          : 0;
-
-                      return (
-                        <tr
-                          key={item.id}
-                          className="hover:bg-surface-container-low transition-colors group"
-                        >
-                          {/* Product / SKU */}
-                          <td className="py-4 px-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary-700 dark:text-primary-300 font-mono font-bold text-sm shrink-0 border border-surface-container-high">
-                                {item.initials}
-                              </div>
-                              <div>
-                                <div className="font-semibold text-foreground flex items-center gap-2">
-                                  <span>{item.name}</span>
-                                  <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-surface-container text-muted-foreground border border-surface-container-high">
-                                    {item.sku}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {item.description}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Unit Cost */}
-                          <td className="py-4 px-4 font-mono font-medium text-foreground">
-                            {item.unitCost} Rs
-                          </td>
-
-                          {/* On Hand (with Interactive Stepper) */}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="inline-flex items-center bg-surface-container rounded-lg p-0.5 border border-surface-container-high">
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuickAdjust(item.id, -1)}
-                                  className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:bg-surface-container-lowest hover:text-foreground transition-all"
-                                  title="Decrement 1 unit"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">
-                                    remove
-                                  </span>
-                                </button>
-                                <span className="w-10 text-center font-mono font-semibold text-foreground">
-                                  {item.onHand}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuickAdjust(item.id, 1)}
-                                  className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:bg-surface-container-lowest hover:text-foreground transition-all"
-                                  title="Increment 1 unit"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">
-                                    add
-                                  </span>
-                                </button>
-                              </div>
-                              <span className="font-mono text-xs text-muted-foreground">
-                                pcs
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Free To Use & Reserved Badge */}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`font-mono font-semibold ${
-                                  isLowStock
-                                    ? "text-red-600 dark:text-red-400"
-                                    : freeUnits === item.onHand
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : "text-primary-600 dark:text-primary-400"
-                                }`}
-                              >
-                                {freeUnits}
-                              </span>
-                              <span className="font-mono text-xs text-muted-foreground">
-                                pcs
-                              </span>
-
-                              {item.reserved > 0 ? (
-                                <span
-                                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium ${
-                                    isLowStock
-                                      ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                  }`}
-                                  title={`${item.reserved} units reserved for pending outbound dispatches`}
-                                >
-                                  {item.reserved} Reserved {isLowStock ? "(Low)" : ""}
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                  100% Available
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Availability Bar */}
-                          <td className="py-4 px-4 w-44">
-                            <div className="space-y-1">
-                              <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden border border-surface-container-high">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-300 ${
-                                    isLowStock
-                                      ? "bg-red-600"
-                                      : freePercent === 100
-                                      ? "bg-emerald-500"
-                                      : "bg-primary-600"
-                                  }`}
-                                  style={{ width: `${Math.min(100, freePercent)}%` }}
-                                ></div>
-                              </div>
-                              <div className="flex justify-between font-mono text-xs text-muted-foreground">
-                                {isLowStock ? (
-                                  <span className="text-red-600 dark:text-red-400 font-medium">
-                                    Reorder Alert
-                                  </span>
-                                ) : (
-                                  <span>{freePercent}% Free</span>
-                                )}
-                                <span>Safety: {item.safetyThreshold}</span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Action Buttons */}
-                          <td className="py-4 px-5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => openEditModal(item)}
-                                className="px-2.5 py-1 text-xs font-mono font-medium bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900 rounded-lg transition-colors flex items-center gap-1 border border-primary-200/50 dark:border-primary-800/40"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">
-                                  tune
-                                </span>
-                                Quick Adjust
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openHistoryModal(item)}
-                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-surface-container rounded-lg transition-colors"
-                                title="View Movement Audit Logs"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  history
-                                </span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards View (< 768px) */}
-            <div className="block md:hidden divide-y divide-surface-container-high">
-              {filteredStock.map((item) => {
-                const freeUnits = Math.max(0, item.onHand - item.reserved);
-                const isLowStock = item.onHand <= item.safetyThreshold;
-                const freePercent =
-                  item.onHand > 0
-                    ? Math.round((freeUnits / item.onHand) * 100)
-                    : 0;
-
-                return (
-                  <div key={item.id} className="p-4 space-y-3 bg-surface-container-lowest">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary-700 dark:text-primary-300 font-mono font-bold text-sm shrink-0 border border-surface-container-high">
-                          {item.initials}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-foreground text-base">
-                            {item.name}
-                          </div>
-                          <span className="font-mono text-xs px-1.5 py-0.2 rounded bg-surface-container text-muted-foreground border border-surface-container-high">
-                            {item.sku}
-                          </span>
-                        </div>
+                        <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700">
+                          {item.sku}
+                        </span>
+                        <span className="flex items-center gap-0.5 text-xs font-mono text-slate-500 dark:text-slate-400">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          {item.bay}
+                        </span>
                       </div>
-                      <span className="font-mono font-bold text-foreground text-base">
-                        {item.unitCost} Rs
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm">
+                        ₹{item.unitCost.toLocaleString()}/u
                       </span>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">
-                      {item.description}
-                    </p>
-
-                    {/* Stock Counts & Stepper */}
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-surface-container-high">
-                      <div>
-                        <span className="text-[11px] font-mono text-muted-foreground uppercase block mb-1">
-                          On Hand
-                        </span>
-                        <div className="inline-flex items-center bg-surface-container rounded-lg p-0.5 border border-surface-container-high">
-                          <button
-                            type="button"
-                            onClick={() => handleQuickAdjust(item.id, -1)}
-                            className="w-7 h-7 flex items-center justify-center rounded text-muted-foreground hover:bg-surface-container-lowest hover:text-foreground"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">remove</span>
-                          </button>
-                          <span className="w-10 text-center font-mono font-semibold text-foreground">
-                            {item.onHand}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleQuickAdjust(item.id, 1)}
-                            className="w-7 h-7 flex items-center justify-center rounded text-muted-foreground hover:bg-surface-container-lowest hover:text-foreground"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">add</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-[11px] font-mono text-muted-foreground uppercase block mb-1">
-                          Free To Use
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span
-                            className={`font-mono font-bold text-base ${
-                              isLowStock
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-primary-600 dark:text-primary-400"
-                            }`}
-                          >
-                            {freeUnits} pcs
-                          </span>
-                          {item.reserved > 0 && (
-                            <span className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                              {item.reserved} Res
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Availability Bar */}
-                    <div className="space-y-1 pt-1">
-                      <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden border border-surface-container-high">
-                        <div
-                          className={`h-full rounded-full ${
-                            isLowStock
-                              ? "bg-red-600"
-                              : freePercent === 100
-                              ? "bg-emerald-500"
-                              : "bg-primary-600"
-                          }`}
-                          style={{ width: `${Math.min(100, freePercent)}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between font-mono text-[11px] text-muted-foreground">
-                        {isLowStock ? (
-                          <span className="text-red-600 dark:text-red-400 font-medium">Reorder Alert</span>
-                        ) : (
-                          <span>{freePercent}% Free</span>
-                        )}
-                        <span>Safety: {item.safetyThreshold}</span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(item)}
-                        className="flex-1 py-1.5 text-xs font-mono font-medium bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300 rounded-lg flex items-center justify-center gap-1.5 border border-primary-200/50"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">tune</span>
-                        Quick Adjust
-                      </button>
                       <button
                         type="button"
                         onClick={() => openHistoryModal(item)}
-                        className="p-1.5 text-muted-foreground hover:bg-surface-container rounded-lg border border-surface-container-high"
-                        title="Audit Logs"
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                        title="Options"
                       >
-                        <span className="material-symbols-outlined text-[18px]">history</span>
+                        <MoreVertical className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Pagination Footer */}
-            <div className="p-4 bg-surface-container flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-muted-foreground border-t border-surface-container-high font-mono">
-              <div>
-                Showing <span className="font-semibold text-foreground">1 to {filteredStock.length}</span> of{" "}
-                <span className="font-semibold text-foreground">48</span> inventory items
+                  {/* Floor Count (On Hand) Stepper Container */}
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span
+                        className={`text-[10px] font-mono tracking-wider font-semibold block uppercase ${
+                          isLowStock
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-slate-500 dark:text-slate-400"
+                        }`}
+                      >
+                        {isLowStock ? "Floor Count (Critical)" : "Floor Count (On Hand)"}
+                      </span>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span
+                          className={`font-mono text-xl sm:text-2xl font-bold ${
+                            isLowStock
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-slate-900 dark:text-white"
+                          }`}
+                        >
+                          {item.onHand}
+                        </span>
+                        <span className="text-xs text-slate-500 font-mono">pcs</span>
+                      </div>
+                    </div>
+
+                    {/* Stepper: [ — ]  Count  [ + ] */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdjust(item.id, -1)}
+                        className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 shadow-xs active:scale-95 transition-all"
+                        aria-label="Decrement count"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-mono font-bold text-sm text-slate-900 dark:text-white">
+                        {item.onHand}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdjust(item.id, 1)}
+                        className="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all"
+                        aria-label="Increment count"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Free Allocation & Safety Threshold Info */}
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-600 dark:text-slate-400">
+                        Free: <strong className="text-slate-900 dark:text-white">{freeUnits} pcs</strong>
+                      </span>
+                      {item.reserved > 0 ? (
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[11px] font-medium ${
+                            isLowStock
+                              ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                              : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                          }`}
+                        >
+                          {item.reserved} Reserved
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.2 rounded text-[11px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          100% Available
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+                      {isLowStock ? `Target: ${item.targetStock} pcs` : `Safety: ${item.safetyThreshold} pcs`}
+                    </span>
+                  </div>
+
+                  {/* Availability Progress Bar */}
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        isLowStock
+                          ? "bg-gradient-to-r from-red-600 to-amber-500"
+                          : "bg-emerald-500"
+                      }`}
+                      style={{ width: `${Math.min(100, isLowStock ? 35 : freePercent)}%` }}
+                    ></div>
+                  </div>
+
+                  {/* Card Bottom: Verification Status & Reconcile / Action Button */}
+                  {isLowStock ? (
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => triggerToast(`PO Reorder triggered: PO-2026-9941 dispatched for 50 units of ${item.sku}`, "shopping_cart")}
+                        className="flex-1 py-2 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        <span>Trigger PO Reorder</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(item)}
+                        className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
+                        title="Adjust Parameters"
+                      >
+                        <SlidersHorizontal className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        {item.auditIcon === "check" ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        )}
+                        <span>{item.auditStatus}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => openHistoryModal(item)}
+                        className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-[11px] font-mono flex items-center gap-1 transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reconcile Log</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled
-                  className="px-2.5 py-1 rounded-lg bg-surface-container-lowest text-muted-foreground text-xs font-medium border border-surface-container-high opacity-50 cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="w-7 h-7 rounded-lg bg-primary-600 text-white text-xs font-semibold flex items-center justify-center shadow-xs"
-                >
-                  1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerToast("Navigated to page 2", "swap_horiz")}
-                  className="w-7 h-7 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-foreground text-xs font-medium flex items-center justify-center border border-surface-container-high transition-colors"
-                >
-                  2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerToast("Navigated to page 3", "swap_horiz")}
-                  className="w-7 h-7 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-foreground text-xs font-medium flex items-center justify-center border border-surface-container-high transition-colors"
-                >
-                  3
-                </button>
-                <button
-                  type="button"
-                  onClick={() => triggerToast("Navigated to next page", "arrow_forward")}
-                  className="px-2.5 py-1 rounded-lg bg-surface-container-lowest text-foreground text-xs font-medium border border-surface-container-high hover:bg-surface-container transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            );
+          })}
+        </div>
+
+        {/* Mobile Pagination Info Bar */}
+        <div className="flex items-center justify-between text-xs font-mono text-slate-500 dark:text-slate-400 py-2">
+          <span>Showing 1-4 of 48 inventory items</span>
+          <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+            <button
+              type="button"
+              disabled
+              className="px-1 text-slate-300 dark:text-slate-600 cursor-not-allowed"
+            >
+              &lt;
+            </button>
+            <span className="text-slate-900 dark:text-white">Page 1</span>
+            <button
+              type="button"
+              onClick={() => triggerToast("Navigating to Page 2...", "arrow_forward")}
+              className="px-1 text-slate-600 dark:text-slate-300 hover:text-blue-600"
+            >
+              &gt;
+            </button>
           </div>
         </div>
       </main>
 
       {/* ========================================================================= */}
-      {/* 3. STOCK ADJUSTMENT MODAL DIALOG                                          */}
+      {/* 3. MOBILE FIXED BOTTOM NAVIGATION BAR                                     */}
+      {/* ========================================================================= */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 py-1.5 px-4 flex items-center justify-around shadow-lg">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveNavTab("dashboard");
+            triggerToast("Navigating to Dashboard", "dashboard");
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+            activeNavTab === "dashboard"
+              ? "text-blue-600 font-semibold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <LayoutGrid className="w-5 h-5" />
+          <span>Dashboard</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveNavTab("operations");
+            triggerToast("Navigating to Operations Hub", "local_shipping");
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+            activeNavTab === "operations"
+              ? "text-blue-600 font-semibold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <Truck className="w-5 h-5" />
+          <span>Operations</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveNavTab("stock");
+            triggerToast("Viewing Stock Inventory", "inventory_2");
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+            activeNavTab === "stock"
+              ? "text-blue-600 font-semibold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <Package className="w-5 h-5" />
+          <span>Stock</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveNavTab("history");
+            triggerToast("Viewing Global Move History", "history");
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+            activeNavTab === "history"
+              ? "text-blue-600 font-semibold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <History className="w-5 h-5" />
+          <span>History</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveNavTab("settings");
+            triggerToast("Opening Warehouse Settings", "settings");
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+            activeNavTab === "settings"
+              ? "text-blue-600 font-semibold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <Settings className="w-5 h-5" />
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      {/* ========================================================================= */}
+      {/* 4. QUICK STOCK ADJUSTMENT MODAL                                           */}
       {/* ========================================================================= */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-surface-container-lowest w-full max-w-lg rounded-2xl shadow-2xl border border-surface-container-high overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="px-5 py-4 bg-surface-container flex items-center justify-between border-b border-surface-container-high">
-              <div className="flex items-center gap-2.5">
-                <span className="p-1 rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300">
-                  <span className="material-symbols-outlined text-[20px]">
-                    inventory
-                  </span>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  <SlidersHorizontal className="w-4 h-4" />
                 </span>
-                <h3 className="font-semibold text-lg text-foreground">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
                   Update Physical Stock
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-surface-container-high transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
-                <span className="material-symbols-outlined text-[20px]">
-                  close
-                </span>
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 space-y-4">
-              {/* Product Badge Pill */}
-              <div className="p-3 rounded-xl bg-surface-container flex justify-between items-center border border-surface-container-high">
+            <div className="p-4 sm:p-5 space-y-4">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex justify-between items-center border border-slate-200 dark:border-slate-700">
                 <div>
-                  <div className="font-semibold text-foreground text-base">
-                    {editingItem?.name} {editingItem?.sku}
+                  <div className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+                    {editingItem?.name} [{editingItem?.sku}]
                   </div>
-                  <div className="text-xs font-mono text-muted-foreground mt-0.5">
-                    Unit Cost:{" "}
-                    <span className="font-medium text-foreground">
-                      {editingItem?.unitCost} Rs
-                    </span>
+                  <div className="text-xs font-mono text-slate-500 mt-0.5">
+                    Landing: <span className="font-semibold text-slate-900 dark:text-white">₹{editingItem?.unitCost}/u</span> • Location: {editingItem?.bay}
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-primary-100 text-primary-900 dark:bg-primary-950 dark:text-primary-300 font-mono text-xs font-semibold">
+                <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300 font-mono text-xs font-bold">
                   WH-ALPHA-01
                 </span>
               </div>
 
-              {/* Form Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1.5">
-                    New On-Hand Count (pcs)
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    New Floor Count (pcs)
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={modalOnHand}
                     onChange={(e) => setModalOnHand(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full h-10 px-3 bg-surface-container rounded-lg font-mono text-base font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 border border-surface-container-high"
+                    className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg font-mono text-base font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Adjustment Reason
                   </label>
                   <select
                     value={modalReason}
                     onChange={(e) => setModalReason(e.target.value)}
-                    className="w-full h-10 px-3 bg-surface-container rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 border border-surface-container-high"
+                    className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700"
                   >
                     <option value="physical_count">Physical Cycle Count</option>
                     <option value="scrap">Damaged / Scrap Write-off</option>
@@ -1263,7 +1057,7 @@ export default function StockInventoryPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Audit Reference / Internal Note
                 </label>
                 <input
@@ -1271,33 +1065,30 @@ export default function StockInventoryPage() {
                   value={modalAuditRef}
                   onChange={(e) => setModalAuditRef(e.target.value)}
                   placeholder="e.g. AUDIT-2024-Q2-CYCLE"
-                  className="w-full h-10 px-3 bg-surface-container rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 border border-surface-container-high"
+                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700"
                 />
               </div>
 
-              <div className="flex items-center gap-2 p-3 bg-primary-50 dark:bg-primary-950/60 text-primary-900 dark:text-primary-300 rounded-xl text-xs font-mono border border-primary-200/50 dark:border-primary-800/40">
-                <span className="material-symbols-outlined text-[18px] text-primary-600 shrink-0">
-                  info
-                </span>
+              <div className="flex items-center gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 rounded-xl text-xs font-mono border border-blue-200/50">
+                <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
                   Free-to-use allocation will automatically recalculate against {editingItem?.reserved || 0} reserved units.
                 </span>
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="p-4 bg-surface-container flex items-center justify-end gap-2.5 border-t border-surface-container-high">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium rounded-lg transition-colors"
+                className="px-4 py-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium hover:text-slate-900"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveModalAdjustment}
-                className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium text-sm rounded-lg shadow-sm transition-all"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm rounded-lg shadow-xs"
               >
                 Save &amp; Post Ledger
               </button>
@@ -1307,50 +1098,44 @@ export default function StockInventoryPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 4. AUDIT MOVEMENT LEDGER MODAL                                            */}
+      {/* 5. AUDIT MOVEMENT LEDGER MODAL                                            */}
       {/* ========================================================================= */}
       {isHistoryOpen && historyTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-surface-container-lowest w-full max-w-xl rounded-2xl shadow-2xl border border-surface-container-high overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-5 py-4 bg-surface-container flex items-center justify-between border-b border-surface-container-high">
-              <div className="flex items-center gap-2.5">
-                <span className="p-1 rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300">
-                  <span className="material-symbols-outlined text-[20px]">
-                    history
-                  </span>
-                </span>
-                <h3 className="font-semibold text-lg text-foreground">
-                  Audit Movements: {historyTarget.name} {historyTarget.sku}
+          <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-blue-600" />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Reconcile Log: {historyTarget.name} [{historyTarget.sku}]
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsHistoryOpen(false)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-surface-container-high transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
-                <span className="material-symbols-outlined text-[20px]">
-                  close
-                </span>
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 max-h-96 overflow-y-auto space-y-3">
+            <div className="p-4 sm:p-5 max-h-80 overflow-y-auto space-y-2.5">
               {movementLogs
                 .filter((log) => log.sku === historyTarget.sku)
                 .map((log) => (
                   <div
                     key={log.id}
-                    className="p-3 rounded-xl bg-surface-container border border-surface-container-high flex items-center justify-between"
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between"
                   >
                     <div>
                       <div className="flex items-center gap-2 font-mono text-xs">
-                        <span className="font-semibold text-foreground">
+                        <span className="font-bold text-slate-900 dark:text-white">
                           {log.reference}
                         </span>
-                        <span className="text-muted-foreground">• {log.timestamp}</span>
+                        <span className="text-slate-500">• {log.timestamp}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Initiated by: {log.actor}
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Actor: {log.actor}
                       </div>
                     </div>
                     <div className="text-right">
@@ -1363,7 +1148,7 @@ export default function StockInventoryPage() {
                       >
                         {log.qtyChange > 0 ? `+${log.qtyChange}` : log.qtyChange} pcs
                       </span>
-                      <div className="text-[10px] font-mono text-muted-foreground uppercase">
+                      <div className="text-[10px] font-mono text-slate-400 uppercase">
                         {log.type.replace("_", " ")}
                       </div>
                     </div>
@@ -1371,13 +1156,13 @@ export default function StockInventoryPage() {
                 ))}
             </div>
 
-            <div className="p-4 bg-surface-container flex justify-end border-t border-surface-container-high">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 flex justify-end border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsHistoryOpen(false)}
-                className="px-4 py-2 bg-surface-container-high hover:bg-surface-container text-foreground rounded-lg text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold"
               >
-                Close Ledger
+                Close
               </button>
             </div>
           </div>
@@ -1385,48 +1170,75 @@ export default function StockInventoryPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 5. INTERACTIVE NOTIFICATION TOAST                                         */}
+      {/* 6. BARCODE SCANNER MODAL                                                  */}
       {/* ========================================================================= */}
-      <div
-        className={`fixed bottom-6 right-6 z-50 bg-foreground text-background px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 transform transition-all duration-300 border border-surface-container-high ${
-          toast.visible
-            ? "translate-y-0 opacity-100 scale-100"
-            : "translate-y-12 opacity-0 scale-95 pointer-events-none"
-        }`}
-      >
-        <span className="material-symbols-outlined text-emerald-500 text-[22px]">
-          {toast.icon}
-        </span>
-        <span className="text-sm font-medium">{toast.message}</span>
-      </div>
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden p-5 space-y-4 text-center">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-1.5 font-bold text-sm text-slate-900 dark:text-white">
+                <QrCode className="w-4 h-4 text-blue-600" />
+                <span>RF Barcode Scanner</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-      {/* ========================================================================= */}
-      {/* 6. BOTTOM SYSTEM FOOTER                                                   */}
-      {/* ========================================================================= */}
-      <footer className="fixed bottom-0 left-0 right-0 w-full bg-surface-container-lowest/90 backdrop-blur-xs border-t border-surface-container-high py-2 z-30 transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-1 text-xs font-mono text-muted-foreground">
-          <div>
-            Nova Precision ERP Suite • Node ID:{" "}
-            <span className="text-foreground font-semibold">WH-ALPHA-01</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              RF Scanners Online
-            </span>
-            <span>
-              Sync Latency:{" "}
-              <span className="text-foreground font-semibold">14ms</span>
-            </span>
-            <span>
-              Active Zone:{" "}
-              <span className="text-foreground font-semibold">
-                Rack Sector B
-              </span>
-            </span>
+            {/* Scanner Viewfinder Box */}
+            <div className="relative w-full h-48 bg-slate-950 rounded-xl flex items-center justify-center overflow-hidden border-2 border-blue-500">
+              <div className="w-40 h-28 border-2 border-dashed border-blue-400/80 rounded-lg flex items-center justify-center">
+                <span className="text-[11px] font-mono text-blue-300 animate-pulse">
+                  Align Barcode in Frame
+                </span>
+              </div>
+              {/* Laser line animation */}
+              <div className="absolute left-4 right-4 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-bounce"></div>
+            </div>
+
+            <p className="text-xs text-slate-500 font-mono">
+              Simulate barcode scan for rapid floor reconciliation:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {stockList.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setIsScannerOpen(false);
+                    openEditModal(item);
+                    triggerToast(`Scanned ${item.sku}: ${item.name}`, "qr_code_scanner");
+                  }}
+                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-xs font-mono text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors"
+                >
+                  Scan {item.sku}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </footer>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. NOTIFICATION TOAST                                                     */}
+      {/* ========================================================================= */}
+      <div
+        className={`fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2.5 transform transition-all duration-300 border border-slate-700 ${
+          toast.visible
+            ? "translate-y-0 opacity-100 scale-100"
+            : "translate-y-8 opacity-0 scale-95 pointer-events-none"
+        }`}
+      >
+        <span className="material-symbols-outlined text-emerald-400 text-[20px]">
+          {toast.icon}
+        </span>
+        <span className="text-xs sm:text-sm font-medium">{toast.message}</span>
+      </div>
     </div>
   );
 }
