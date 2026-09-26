@@ -49,8 +49,8 @@ $$\text{Login} \longrightarrow \text{Dashboard} \longrightarrow \text{Receipt (I
 2. **Action**:
    - Click **New Receipt** (or navigate to `/operations/receipts/new`).
    - Select Supplier: `Apex Industrial Supply`.
-   - Destination Location: `WH-MAIN / Shelf A1` (or internal rack).
-   - Select Product: `Industrial Steel Bearing (BEAR-001)`.
+   - Destination Location: `Rack A - Main Warehouse` (or internal rack).
+   - Select Product: `Steel Rods (STL-ROD-10)`.
    - Set Quantity: `50` units.
    - Click **Create Receipt**.
 3. **State Transition**:
@@ -60,34 +60,33 @@ $$\text{Login} \longrightarrow \text{Dashboard} \longrightarrow \text{Receipt (I
    - Click **Validate** $\to$ status transitions to `Done`.
 4. **Verification**:
    - Toast notification confirms validation.
-   - Balance in `WH-MAIN / Shelf A1` increments by `+50` units.
+   - Balance in `Rack A - Main Warehouse` increments by `+50` units.
 
 ---
 
 ## Stage 4: Internal Warehouse Transfer (`WH/INT`)
 
-1. **Navigate to**: `/operations/adjustments` or operations workspace.
+1. **Navigate to**: `/operations/transfers` or operations workspace.
 2. **Action**:
-   - Move `20` units of `BEAR-001` from `Shelf A1` to `Shelf B2` (Pick Zone).
-   - Specify Source Location: `Shelf A1`.
-   - Destination Location: `Shelf B2`.
+   - Move `20` units of `STL-ROD-10` from `Rack A - Main Warehouse` to `Rack B - Secondary Warehouse` (Pick Zone).
+   - Specify Source Location: `Rack A - Main Warehouse`.
+   - Destination Location: `Rack B - Secondary Warehouse`.
    - Click **Validate**.
 3. **Verification**:
    - Sequence generated: `WH/INT/0001`.
    - Total company on-hand balance remains unchanged (net delta 0).
-   - Bin `Shelf A1` decreases by `20`; Bin `Shelf B2` increases by `20`.
+   - Bin `Rack A - Main Warehouse` decreases by `20`; Bin `Rack B - Secondary Warehouse` increases by `20`.
 
 ---
 
 ## Stage 5: Outbound Customer Delivery (`WH/OUT`)
 
 1. **Navigate to**: `/operations/deliveries`
-   - Switch between **List View** and **Kanban View** to showcase visual order staging.
 2. **Action**:
    - Click **New Delivery** (or select pending order `WH/OUT/0002`).
-   - Destination Customer: `Apex Global Logistics`.
-   - Source Location: `WH-MAIN / Shelf B2`.
-   - Product: `BEAR-001`.
+   - Destination Customer: `Northstar Offices`.
+   - Source Location: `Rack B - Secondary Warehouse`.
+   - Product: `STL-ROD-10`.
    - Set Quantity: `15` units.
 3. **Free-to-Use & Reservation Demonstration**:
    - Note the **Free-to-Use** calculation:
@@ -97,7 +96,7 @@ $$\text{Login} \longrightarrow \text{Dashboard} \longrightarrow \text{Receipt (I
 4. **Validation**:
    - Click **Mark as Ready** $\to$ transitions to `Ready`.
    - Click **Validate** $\to$ transitions to `Done`.
-   - Stock in `Shelf B2` is decremented to `5` units.
+   - Stock in `Rack B - Secondary Warehouse` is decremented to `5` units.
 
 ---
 
@@ -105,11 +104,11 @@ $$\text{Login} \longrightarrow \text{Dashboard} \longrightarrow \text{Receipt (I
 
 1. **Navigate to**: `/operations/adjustments`
 2. **Scenario**:
-   - Floor worker conducts a physical cycle count in `Shelf B2` and finds `4` bearings instead of recorded `5` (1 damaged/lost).
+   - Floor worker conducts a physical cycle count in `Rack B - Secondary Warehouse` and finds `4` steel rods instead of recorded `5` (1 damaged/lost).
 3. **Action**:
    - Click **New Adjustment** (`/operations/adjustments/new`).
-   - Location: `WH-MAIN / Shelf B2`.
-   - Product: `BEAR-001`.
+   - Location: `Rack B - Secondary Warehouse`.
+   - Product: `STL-ROD-10`.
    - Counted Quantity: `4`.
    - Reason: `Annual cycle count — 1 unit damaged in bin`.
    - Click **Create Adjustment**.
@@ -126,13 +125,13 @@ $$\text{Login} \longrightarrow \text{Dashboard} \longrightarrow \text{Receipt (I
 1. **Navigate to**: `/moves`
 2. **Demonstrate Audit Trail**:
    - Point out the sequential ledger entries resulting from the entire demo session:
-     1. `WH/IN/0002` $\to$ `+50` units (Inbound, Green, Apex Supply $\to$ Shelf A1)
-     2. `WH/INT/0001` $\to$ `−20` units (Shelf A1) & `+20` units (Shelf B2)
-     3. `WH/OUT/0002` $\to$ `−15` units (Outbound, Red, Shelf B2 $\to$ Customer)
-     4. `WH/ADJ/0001` $\to$ `−1` unit (Outbound / Loss, Shelf B2)
+     1. `WH/IN/0002` $\to$ `+50` units (Inbound, Green, Apex Supply $\to$ Rack A)
+     2. `WH/INT/0001` $\to$ `−20` units (Rack A) & `+20` units (Rack B)
+     3. `WH/OUT/0002` $\to$ `−15` units (Outbound, Red, Rack B $\to$ Customer)
+     4. `WH/ADJ/0001` $\to$ `−1` unit (Outbound / Loss, Rack B)
 3. **Ledger Controls**:
    - Filter by **Type** (`Receipt`, `Delivery`, `Adjustment`).
-   - Search by SKU: `BEAR-001`.
+   - Search by SKU: `STL-ROD-10`.
    - Show immutable details: Exact Timestamp, Actor (`Maya`), Source, and Destination.
 4. **Final Closing Statement**:
    > *"Every single physical movement in StockSense is backed by an immutable ledger row. No negative stock, zero hidden discrepancies, and full audit compliance from day one."*

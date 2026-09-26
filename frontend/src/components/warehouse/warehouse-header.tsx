@@ -20,6 +20,7 @@ const navigation = [
     items: [
       { label: "Receipt", href: "/operations/receipts" },
       { label: "Delivery", href: "/operations/deliveries" },
+      { label: "Transfer", href: "/operations/transfers" },
       { label: "Adjustment", href: "/operations/adjustments" },
     ],
   },

@@ -18,18 +18,21 @@ const CONFIG = {
   receipts: { type: "receipt", title: "Receipts", description: "Track incoming stock from suppliers through draft, ready, and done states." },
   deliveries: { type: "delivery", title: "Deliveries", description: "Manage outgoing orders and see which deliveries are ready, waiting, or complete." },
   adjustments: { type: "adjustment", title: "Inventory adjustments", description: "Reconcile counted quantities against recorded stock with an auditable reason." },
+  transfers: { type: "transfer", title: "Internal transfers", description: "Move stock between different storage locations within your warehouses." },
 } as const;
 
 const OPEN_STATUSES = {
   receipts: ["draft", "ready"],
   deliveries: ["draft", "waiting", "ready"],
   adjustments: ["draft", "ready"],
+  transfers: ["draft", "ready"],
 } as const;
 
 const STATUSES = {
   receipts: ["draft", "ready", "done", "canceled"],
   deliveries: ["draft", "waiting", "ready", "done", "canceled"],
   adjustments: ["draft", "ready", "done", "canceled"],
+  transfers: ["draft", "ready", "done", "canceled"],
 } as const;
 
 function formatDateTime(value?: string | null): string {
