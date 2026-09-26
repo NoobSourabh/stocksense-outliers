@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Activity, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, CalendarClock, CircleHelp, RotateCcw, SlidersHorizontal } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { stockApi, type Dashboard } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { WarehousePanel } from "@/components/warehouse/warehouse-panel";
 import { StatusBadge } from "@/components/status-badge";
@@ -16,9 +16,6 @@ type OperationStatus = "draft" | "waiting" | "ready" | "done" | "canceled";
 interface DashboardFilters {
   type: string;
   status: string;
-  warehouseId: string;
-  locationId: string;
-  categoryId: string;
 }
 
 interface DashboardOperation {
@@ -32,18 +29,15 @@ interface DashboardOperation {
   schedule_date?: string | null;
   status: OperationStatus | string;
   responsibleUser?: string | null;
-  warehouseId?: string;
-  locationId?: string;
-  categoryId?: string;
+  sourceLocationName?: string | null;
+  destinationLocationName?: string | null;
 }
 
-interface DashboardResponse {
-  receiptSummary: { toReceive: number; late: number; total: number };
-  deliverySummary: { toDeliver: number; late: number; waiting: number; total: number };
-  lowStock: number | { count?: number; total?: number; items?: unknown[] };
+type DashboardResponse = Omit<Dashboard, "recentOperations" | "lowStock"> & {
+  lowStock: Dashboard["lowStock"] | number | { count?: number; total?: number; items?: unknown[] };
   scheduledTransfers?: number | { count?: number; total?: number };
   recentOperations: DashboardOperation[];
-}
+};
 
 const DEMO_DASHBOARD: DashboardResponse = {
   receiptSummary: { toReceive: 8, late: 2, total: 14 },
@@ -59,20 +53,18 @@ const DEMO_DASHBOARD: DashboardResponse = {
   ],
 };
 
-const FILTERS: (keyof DashboardFilters)[] = ["type", "status", "warehouseId", "locationId", "categoryId"];
+const FILTERS: (keyof DashboardFilters)[] = ["type", "status"];
 
 function readFilters(params: URLSearchParams): DashboardFilters {
   return {
     type: params.get("type") ?? "",
     status: params.get("status") ?? "",
-    warehouseId: params.get("warehouseId") ?? "",
-    locationId: params.get("locationId") ?? "",
-    categoryId: params.get("categoryId") ?? "",
   };
 }
 
 function countOf(value: DashboardResponse["lowStock"] | DashboardResponse["scheduledTransfers"] | undefined): number {
   if (typeof value === "number") return value;
+  if (Array.isArray(value)) return value.length;
   if (value && typeof value === "object") {
     if (value.count !== undefined) return value.count;
     if (value.total !== undefined) return value.total;
@@ -136,12 +128,15 @@ export function DashboardClient() {
   const filters = useMemo(() => readFilters(new URLSearchParams(searchParams.toString())), [searchParams]);
   const activeFilterCount = FILTERS.filter((key) => filters[key]).length;
 
-  const dashboardQuery = useQuery({
+  const dashboardQuery = useQuery<DashboardResponse>({
     queryKey: ["dashboard", filters],
-    queryFn: () => {
-      const query = new URLSearchParams();
-      FILTERS.forEach((key) => { if (filters[key]) query.set(key, filters[key]); });
-      return apiFetch<DashboardResponse>(`/dashboard${query.size ? `?${query.toString()}` : ""}`, { auth: true });
+    queryFn: async () => {
+      const [dashboard, operationPage, transferPage] = await Promise.all([
+        stockApi.dashboard(),
+        stockApi.operations({ type: filters.type || undefined, status: filters.status || undefined }),
+        stockApi.operations({ type: "transfer" }),
+      ]);
+      return { ...dashboard, recentOperations: operationPage.items, scheduledTransfers: transferPage.items.filter((operation) => !["done", "canceled"].includes(operation.status)).length };
     },
   });
 
@@ -165,10 +160,7 @@ export function DashboardClient() {
   const operations = data?.recentOperations.filter((operation) => {
     if (!isDemo) return true;
     return (!filters.type || operation.type === filters.type)
-      && (!filters.status || operation.status === filters.status)
-      && (!filters.warehouseId || operation.warehouseId === filters.warehouseId)
-      && (!filters.locationId || operation.locationId === filters.locationId)
-      && (!filters.categoryId || operation.categoryId === filters.categoryId);
+      && (!filters.status || operation.status === filters.status);
   }) ?? [];
 
   return (
@@ -177,7 +169,7 @@ export function DashboardClient() {
         <div className="flex items-center gap-2 text-xs text-muted-foreground"><SlidersHorizontal className="size-4" /><span>Filter operations</span>{activeFilterCount > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">{activeFilterCount} active</span>}</div>
         <Button variant="ghost" size="sm" onClick={clearFilters} disabled={activeFilterCount === 0} className="text-muted-foreground"><RotateCcw /> Clear filters</Button>
       </div>
-      <div className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2">
         <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Operation type
           <select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)} className="h-9 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
             <option value="">All types</option><option value="receipt">Receipt</option><option value="delivery">Delivery</option><option value="transfer">Transfer</option><option value="adjustment">Adjustment</option>
@@ -188,11 +180,6 @@ export function DashboardClient() {
             <option value="">All statuses</option><option value="draft">Draft</option><option value="waiting">Waiting</option><option value="ready">Ready</option><option value="done">Done</option><option value="canceled">Canceled</option>
           </select>
         </label>
-        {(["warehouseId", "locationId", "categoryId"] as const).map((key) => (
-          <label key={key} className="grid gap-1.5 text-xs font-medium text-muted-foreground">{key === "warehouseId" ? "Warehouse ID" : key === "locationId" ? "Location ID" : "Category ID"}
-            <input value={filters[key]} onChange={(event) => updateFilter(key, event.target.value)} placeholder="Any" className="h-9 min-w-0 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/50" />
-          </label>
-        ))}
       </div>
 
       {dashboardQuery.isPending ? (

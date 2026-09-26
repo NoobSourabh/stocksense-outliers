@@ -241,7 +241,8 @@ export async function apiFetch<T>(
   let response: Response;
 
   const baseUrl = getApiBaseUrl();
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const rawPath = path.startsWith("/") ? path : `/${path}`;
+  const normalizedPath = rawPath.startsWith("/api/") ? rawPath : `/api/v1${rawPath}`;
   const requestUrl = baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
 
   try {
@@ -250,6 +251,7 @@ export async function apiFetch<T>(
       headers: requestHeaders,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: timeout.signal,
+      credentials: rest.credentials ?? "include",
     });
   } catch (error) {
     if (timeout.didTimeout()) {
