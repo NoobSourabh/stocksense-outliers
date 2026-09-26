@@ -136,13 +136,13 @@ function MoveCard({ move }: { move: Awaited<ReturnType<typeof stockApi.moves>>["
 }
 
 function MoveKanban({ moves }: { moves: Awaited<ReturnType<typeof stockApi.moves>>["items"] }) {
-  const statuses = ["draft", "waiting", "ready", "done", "canceled"].filter((status) => moves.some((move) => move.status.toLowerCase() === status));
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Stock movements grouped by operation status">
+  const statuses = ["draft", "waiting", "ready", "done", "canceled"];
+  return <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Stock movements grouped by operation status">
     {statuses.map((status) => {
       const items = moves.filter((move) => move.status.toLowerCase() === status);
       return <section key={status} className="min-w-0 rounded-lg bg-muted/60 p-3" aria-label={`${capitalize(status)} movements`}>
         <div className="mb-3 flex items-center justify-between px-1"><h3 className="text-sm font-semibold">{capitalize(status)}</h3><span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{items.length}</span></div>
-        <div className="grid gap-2">{items.map((move) => <MoveCard key={move.id} move={move} />)}</div>
+        <div className="grid gap-2">{items.length === 0 ? <p className="rounded-md border border-dashed border-border px-3 py-5 text-center text-xs text-muted-foreground">No movements</p> : items.map((move) => <MoveCard key={move.id} move={move} />)}</div>
       </section>;
     })}
   </div>;

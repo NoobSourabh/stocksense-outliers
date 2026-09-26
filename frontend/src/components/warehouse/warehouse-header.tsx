@@ -78,9 +78,11 @@ function NavDropdown({
         <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div
-        className={`z-30 mt-1 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-m3-2 ${
-          mobile ? "ml-3" : "absolute left-0 top-full"
-        }`}
+        className={
+          mobile
+            ? "my-1 ml-3 space-y-1 border-l-2 border-border/60 pl-2"
+            : "absolute left-0 top-full z-30 mt-1 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-m3-2"
+        }
       >
         {items.map((child) => (
           <Link
@@ -90,7 +92,7 @@ function NavDropdown({
             onClick={() => {
               if (!mobile) detailsRef.current?.removeAttribute("open");
             }}
-            className={`block rounded-md px-3 ${mobile ? "py-2.5" : "py-2"} text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isCurrent(child.href) ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
+            className={`block rounded-md px-3 ${mobile ? "py-1.5" : "py-2"} text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isCurrent(child.href) ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
           >
             {child.label}
           </Link>
