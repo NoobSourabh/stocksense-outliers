@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { stockApi } from "@/lib/stock-api";
@@ -65,24 +66,24 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
               }`}
             >
               {item.items.map((child) => (
-                <a
+                <Link
                   key={child.href}
                   href={child.href}
                   className="block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   {child.label}
-                </a>
+                </Link>
               ))}
             </div>
           </details>
         ) : (
-          <a
+          <Link
             key={item.label}
             href={item.href}
             className="flex items-center rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             {item.label}
-          </a>
+          </Link>
         ),
       )}
     </>
@@ -105,12 +106,12 @@ function ProfileMenu({ onLogout }: { onLogout: () => void }) {
         <ChevronDown className="size-3.5 text-muted-foreground" />
       </summary>
       <div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-m3-2">
-        <a
+        <Link
           href="/profile"
           className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
           <UserRound className="size-4" /> My Profile
-        </a>
+        </Link>
         <button type="button" onClick={onLogout} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
           <LogOut className="size-4" /> Logout
         </button>
@@ -133,13 +134,13 @@ export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
       <header className="border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1520px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3 lg:gap-5">
-            <a
+            <Link
               href="/dashboard"
               className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"
               aria-label="StockSense home"
             >
               <Boxes className="size-4" />
-            </a>
+            </Link>
             <div className="hidden items-center gap-2 sm:flex">
               <span className="whitespace-nowrap text-lg font-semibold tracking-tight">StockSense</span>
               <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
@@ -183,7 +184,7 @@ export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
               >
                 <NavigationItems mobile />
                 <div className="my-2 border-t border-border" />
-                <a href="/profile" className="block rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">My Profile</a>
+                <Link href="/profile" className="block rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">My Profile</Link>
                 <button type="button" onClick={() => void logout()} className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">Logout</button>
               </nav>
             </details>

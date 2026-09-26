@@ -45,13 +45,15 @@ interface StatusBadgeProps {
  * **Source of truth:** server/database status value passed as prop.
  */
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const styles = STATUS_STYLES[status] ?? FALLBACK_STYLES
+  const normalized = status ? status.trim() : "";
+  const titleCased = normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase() : "";
+  const styles = STATUS_STYLES[normalized] ?? STATUS_STYLES[titleCased] ?? FALLBACK_STYLES;
 
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles}`}
     >
-      {status}
+      {titleCased || normalized || "—"}
     </span>
-  )
+  );
 }
