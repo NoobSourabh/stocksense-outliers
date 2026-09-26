@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, Boxes, CalendarClock, CircleHelp, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Activity, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, Boxes, CalendarClock, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { stockApi, type Dashboard } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { WarehousePanel } from "@/components/warehouse/warehouse-panel";
@@ -46,21 +46,6 @@ type DashboardResponse = Omit<Dashboard, "recentOperations" | "lowStock"> & {
   scheduledTransfers?: number | { count?: number; total?: number };
   activeProductCount?: number;
   recentOperations: DashboardOperation[];
-};
-
-const DEMO_DASHBOARD: DashboardResponse = {
-  receiptSummary: { toReceive: 8, late: 2, total: 14 },
-  deliverySummary: { toDeliver: 11, late: 1, waiting: 3, total: 18 },
-  lowStock: { count: 4 },
-  activeProductCount: 42,
-  scheduledTransfers: 3,
-  recentOperations: [
-    { id: "demo-1", reference: "WH/OUT/0248", type: "delivery", partnerName: "Northstar Offices", scheduleDate: "2026-09-26", status: "ready", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-FURN" },
-    { id: "demo-2", reference: "WH/IN/0247", type: "receipt", partnerName: "Apex Metals", scheduleDate: "2026-09-25", status: "waiting", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-METAL" },
-    { id: "demo-3", reference: "WH/TR/0246", type: "transfer", partnerName: "Main → Overflow", scheduleDate: "2026-09-27", status: "ready", warehouseId: "WH-01", locationId: "LOC-B2", categoryId: "CAT-FURN" },
-    { id: "demo-4", reference: "WH/OUT/0245", type: "delivery", partnerName: "Harbor Design Co.", scheduleDate: "2026-09-24", status: "done", warehouseId: "WH-02", locationId: "LOC-C3", categoryId: "CAT-FURN" },
-    { id: "demo-5", reference: "WH/ADJ/0244", type: "adjustment", partnerName: "Cycle count", scheduleDate: "2026-09-24", status: "done", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-TOOLS" },
-  ],
 };
 
 const FILTERS: (keyof DashboardFilters)[] = ["type", "status", "warehouseId", "locationId", "categoryId"];
@@ -186,16 +171,8 @@ export function DashboardClient() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
-  const isDemo = !dashboardQuery.data && dashboardQuery.isError;
-  const data = dashboardQuery.data ?? (isDemo ? DEMO_DASHBOARD : undefined);
-  const operations = data?.recentOperations.filter((operation) => {
-    if (!isDemo) return true;
-    return (!filters.type || operation.type === filters.type)
-      && (!filters.status || operation.status === filters.status)
-      && (!filters.warehouseId || operation.warehouseId === filters.warehouseId)
-      && (!filters.locationId || operation.locationId === filters.locationId)
-      && (!filters.categoryId || operation.categoryId === filters.categoryId);
-  }) ?? [];
+  const data = dashboardQuery.data;
+  const operations = data?.recentOperations ?? [];
 
   return (
     <RouteScaffold section="Dashboard" title="Operations overview" description="A live view of incoming and outgoing work, stock exceptions, and scheduled transfers.">
@@ -236,22 +213,30 @@ export function DashboardClient() {
           <div className="grid gap-4 md:grid-cols-2"><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /></div>
           <div className="grid gap-4 md:grid-cols-3"><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /></div>
         </div>
+      ) : dashboardQuery.isError ? (
+        <div className="grid justify-items-center gap-3 py-16 text-center">
+          <p className="text-sm text-destructive">Couldn’t load dashboard data. Check your connection and try again.</p>
+          <Button variant="outline" onClick={() => void dashboardQuery.refetch()}>Retry</Button>
+        </div>
       ) : data ? (
         <>
-          {isDemo && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-bg/50 px-4 py-3 text-sm"><span className="flex items-center gap-2 text-foreground"><CircleHelp className="size-4 shrink-0 text-warning" /><span><strong>Sample data</strong><span className="text-muted-foreground"> · Live dashboard data isn’t available yet.</span></span></span><Button variant="outline" size="sm" onClick={() => void dashboardQuery.refetch()}>Retry connection</Button></div>}
           <div className="grid gap-4 md:grid-cols-2">
             <SummaryCard kind="receipt" title="Receipts" primary={data.receiptSummary.toReceive} late={data.receiptSummary.late} total={data.receiptSummary.total} />
             <SummaryCard kind="delivery" title="Deliveries" primary={data.deliverySummary.toDeliver} late={data.deliverySummary.late} waiting={data.deliverySummary.waiting} total={data.deliverySummary.total} />
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <MetricCard title="Total products in stock" value={data.activeProductCount ?? "—"} hint="Active products in the catalog" icon={Boxes} />
+            <MetricCard title="Total products in stock" value={data.activeProductCount ?? "0"} hint="Active products in the catalog" icon={Boxes} />
             <MetricCard title="Low / out of stock" value={countOf(data.lowStock)} hint="At or below reorder point" icon={AlertTriangle} tone="amber" />
-            <MetricCard title="Scheduled transfers" value={data.scheduledTransfers === undefined ? "—" : countOf(data.scheduledTransfers)} hint="Open internal moves" icon={CalendarClock} tone="green" />
+            <MetricCard title="Scheduled transfers" value={data.scheduledTransfers === undefined ? "0" : countOf(data.scheduledTransfers)} hint="Open internal moves" icon={CalendarClock} tone="green" />
           </div>
           <div className="mt-6">
             <RoutePanel title="Recent operations" description="The latest receipts, deliveries, transfers, and adjustments matching your filters.">
               {operations.length === 0 ? (
-                <div className="grid justify-items-center py-12 text-center"><span className="mb-3 grid size-11 place-items-center rounded-full bg-muted text-muted-foreground"><Activity className="size-5" /></span><p className="font-medium">No operations found</p><p className="mt-1 text-sm text-muted-foreground">Try adjusting or clearing your filters.</p></div>
+                <div className="grid justify-items-center py-12 text-center">
+                  <span className="mb-3 grid size-11 place-items-center rounded-full bg-muted text-muted-foreground"><Activity className="size-5" /></span>
+                  <p className="font-medium">No operations found</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{activeFilterCount > 0 ? "Try adjusting or clearing your filters." : "Operations will appear here as activity is recorded."}</p>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[850px] text-left">

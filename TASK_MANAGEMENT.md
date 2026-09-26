@@ -166,6 +166,9 @@
   - *Test:* Every validated operation creates one `StockMove` row per line; no update/delete endpoint exists.
 - [ ] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` with receipt/delivery summaries, low stock, recent operations
   - *Test:* KPIs match underlying lists; isLate computed correctly.
+- [ ] **KUN-024 · Dashboard filter and aggregate support** — extend dashboard/operation APIs for warehouse, location, and category filters; return active-product and open-transfer counts; make receipt/delivery `total` count all operations rather than duplicate the open count; return accurate totals independent of the 50-row list limit.
+  - *Owner:* Kunal
+  - *Test:* Filters scope recent operations and summary metrics consistently; counts match database queries with more than 50 operations.
 
 
 

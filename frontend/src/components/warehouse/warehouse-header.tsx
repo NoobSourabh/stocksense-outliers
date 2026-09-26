@@ -7,21 +7,13 @@ import {
   ChevronDown,
   LogOut,
   Menu,
-  Plus,
-  Save,
   Search,
-  SlidersHorizontal,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { stockApi } from "@/lib/stock-api";
-import { Button } from "@/components/ui/button";
-
-interface WarehouseHeaderProps {
-  onSave?: () => void;
-}
 
 const navigation = [
   { label: "Dashboard", href: "/dashboard" },
@@ -146,11 +138,13 @@ function ProfileMenu({ onLogout }: { onLogout: () => void }) {
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-xs font-semibold text-foreground leading-snug">
-              {user?.name ?? "StockSense User"}
+              {user?.name ?? "User"}
             </span>
-            <span className="truncate text-[11px] text-muted-foreground leading-none">
-              {user?.email ?? "user@stocksense.io"}
-            </span>
+            {user?.email && (
+              <span className="truncate text-[11px] text-muted-foreground leading-none">
+                {user.email}
+              </span>
+            )}
             <div className="mt-1.5 flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium capitalize text-primary leading-none">
                 <span className="size-1 rounded-full bg-primary" />
@@ -251,7 +245,7 @@ function MobileNavMenu({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
+export function WarehouseHeader() {
   const router = useRouter();
   const queryClient = useQueryClient();
   async function logout() {
@@ -261,72 +255,52 @@ export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
     router.refresh();
   }
   return (
-    <>
-      <header className="border-b border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1520px] items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3 lg:gap-5">
-            <Link
-              href="/dashboard"
-              className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"
-              aria-label="StockSense home"
-            >
-              <Boxes className="size-4" />
-            </Link>
-            <div className="hidden items-center gap-2 sm:flex">
-              <span className="whitespace-nowrap text-lg font-semibold tracking-tight">StockSense</span>
-              <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                Warehouse
-              </span>
-            </div>
-            <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Main navigation">
-              <NavigationItems />
-            </nav>
+    <header className="border-b border-border bg-card/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-[1520px] items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 lg:gap-5">
+          <Link
+            href="/dashboard"
+            className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"
+            aria-label="StockSense home"
+          >
+            <Boxes className="size-4" />
+          </Link>
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="whitespace-nowrap text-lg font-semibold tracking-tight">StockSense</span>
+            <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+              Warehouse
+            </span>
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <label className="relative hidden w-56 lg:block">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                className="h-8 w-full rounded-md bg-muted pl-8 pr-10 text-xs outline-none ring-primary-500/40 transition focus:bg-card focus:ring-2"
-                placeholder="Search SKU, Bin..."
-                aria-label="Search SKU or bin"
-              />
-              <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1 font-mono text-[10px] text-muted-foreground">
-                ⌘K
-              </kbd>
-            </label>
-            <button
-              type="button"
-              className="relative grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Notifications"
-            >
-              <Bell className="size-4" />
-              <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />
-            </button>
-            <div className="hidden h-5 w-px bg-border sm:block" />
-            <ProfileMenu onLogout={() => void logout()} />
-            <MobileNavMenu onLogout={() => void logout()} />
-          </div>
+          <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Main navigation">
+            <NavigationItems />
+          </nav>
         </div>
-      </header>
 
-      {onSave && <div className="border-b border-border bg-card">
-        <div className="mx-auto flex min-h-14 max-w-[1520px] flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <SlidersHorizontal className="size-3.5" />
-            <span className="hidden sm:inline">Settings</span>
-            <span className="hidden text-border sm:inline">/</span>
-            <span>Locations &amp; Bins</span>
-            <span className="text-border">/</span>
-            <span className="rounded bg-secondary px-2 py-1 font-mono text-foreground">WH/Stock1</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">Discard</Button>
-            <Button variant="outline" size="sm" className="hidden sm:inline-flex"><Plus /> New Location</Button>
-            <Button size="sm" onClick={onSave}><Save /> Save Location</Button>
-          </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <label className="relative hidden w-56 lg:block">
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              className="h-8 w-full rounded-md bg-muted pl-8 pr-10 text-xs outline-none ring-primary-500/40 transition focus:bg-card focus:ring-2"
+              placeholder="Search SKU, Bin..."
+              aria-label="Search SKU or bin"
+            />
+            <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1 font-mono text-[10px] text-muted-foreground">
+              ⌘K
+            </kbd>
+          </label>
+          <button
+            type="button"
+            className="relative grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Notifications"
+          >
+            <Bell className="size-4" />
+            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />
+          </button>
+          <div className="hidden h-5 w-px bg-border sm:block" />
+          <ProfileMenu onLogout={() => void logout()} />
+          <MobileNavMenu onLogout={() => void logout()} />
         </div>
-      </div>}
-    </>
+      </div>
+    </header>
   );
 }
