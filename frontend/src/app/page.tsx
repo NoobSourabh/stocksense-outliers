@@ -1,26 +1,27 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
   AtSign,
+  BadgeCheck,
+  Bug,
   Check,
   CheckCircle2,
-  ChevronRight,
   Circle,
   Columns,
   Eye,
   EyeOff,
   Fingerprint,
   Info,
-  KeyRound,
+  Key,
   LayoutGrid,
   Lock,
   LogIn,
   Mail,
   Moon,
+  Shield,
   ShieldCheck,
   Sun,
   User,
@@ -32,268 +33,220 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { showSuccessToast, showErrorToast } from "@/lib/toast-utils";
 
-type AuthTab = "login" | "signup";
+type AuthTab = "signin" | "signup";
 
 interface ToastState {
   visible: boolean;
-  title: string;
   message: string;
-  isError: boolean;
+  type: "info" | "success" | "error";
 }
 
 export default function IdentityPortalPage() {
   const theme = useTheme();
 
   // Layout & Navigation State
-  const [isSideBySide, setIsSideBySide] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<AuthTab>("login");
-  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<AuthTab>("signin");
+  const [isSideBySide, setIsSideBySide] = useState<boolean>(false);
+  const [isLargeScreen, setIsLargeScreen] = useState<boolean>(false);
 
-  // Login Form State
-  const [loginId, setLoginId] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loginError, setLoginError] = useState(false);
+  // Sign In Form State
+  const [signInLoginId, setSignInLoginId] = useState("analyst_omega");
+  const [signInPassword, setSignInPassword] = useState("NovaSecure2026@");
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showErrorNotice, setShowErrorNotice] = useState(false);
 
   // Sign Up Form State
-  const [signupLoginId, setSignupLoginId] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [signUpLoginId, setSignUpLoginId] = useState("");
+  const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
+  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+  const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
 
-  // In-app Custom Toast State (matches Stitch visual design)
-  const [toast, setToast] = useState<ToastState>({
+  // Floating Toast State (exact Stitch mobile floating alert)
+  const [floatingToast, setFloatingToast] = useState<ToastState>({
     visible: false,
-    title: "",
     message: "",
-    isError: false,
+    type: "info",
   });
 
   const rememberMeId = useId();
-  const termsId = useId();
 
-  // Screen responsiveness listener
+  // Responsive screen listener
   useEffect(() => {
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 1024;
-      setIsMobileScreen(isMobile);
-      if (isMobile) {
-        setIsSideBySide(false);
-      }
+    const checkScreen = () => {
+      const isLarge = window.innerWidth >= 1024;
+      setIsLargeScreen(isLarge);
     };
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    checkScreen();
+    window.addEventListener("resize", checkScreen);
+    return () => window.removeEventListener("resize", checkScreen);
   }, []);
 
-  // Toast Helper
-  const triggerToast = (title: string, message: string, isError = false) => {
-    setToast({ visible: true, title, message, isError });
-    if (isError) {
-      showErrorToast(new Error(message), title);
+  // Floating Toast Helper
+  const triggerToast = (message: string, type: "info" | "success" | "error" = "info") => {
+    setFloatingToast({ visible: true, message, type });
+    if (type === "error") {
+      showErrorToast(new Error(message));
     } else {
-      showSuccessToast(message, { title });
+      showSuccessToast(message);
     }
   };
 
   useEffect(() => {
-    if (toast.visible) {
+    if (floatingToast.visible) {
       const timer = setTimeout(() => {
-        setToast((prev) => ({ ...prev, visible: false }));
-      }, 4000);
+        setFloatingToast((prev) => ({ ...prev, visible: false }));
+      }, 3500);
       return () => clearTimeout(timer);
     }
-  }, [toast.visible]);
+  }, [floatingToast.visible]);
 
-  // Validation rules for Sign Up Login ID (6-12 chars)
-  const isLoginIdValid = signupLoginId.length >= 6 && signupLoginId.length <= 12;
+  // Sign Up Login ID Validation (6-12 chars)
+  const loginIdCount = signUpLoginId.length;
+  const isLoginIdValid = loginIdCount >= 6 && loginIdCount <= 12;
 
-  // Validation rules for Sign Up Email
+  // Sign Up Email Validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isDuplicateEmail = signupEmail.trim().toLowerCase() === "existing@domain.com";
-  const isEmailValid = emailRegex.test(signupEmail.trim()) && !isDuplicateEmail;
+  const isEmailValid = emailRegex.test(signUpEmail.trim());
 
-  // Validation rules for Sign Up Password
-  const pwdLengthValid = signupPassword.length > 8;
-  const pwdCaseValid = /[a-z]/.test(signupPassword) && /[A-Z]/.test(signupPassword);
-  const pwdSpecialValid = /[!@#$%^&*(),.?":{}|<>]/.test(signupPassword);
-  const pwdUniqueValid =
-    signupPassword.length > 0 &&
-    !["password", "12345678", "admin123", "password123"].includes(signupPassword.toLowerCase());
+  // Password Security Criteria (matches mobile Stitch spec)
+  const ruleLength = signUpPassword.length > 8;
+  const ruleLower = /[a-z]/.test(signUpPassword);
+  const ruleUpper = /[A-Z]/.test(signUpPassword);
+  const ruleSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(signUpPassword);
+  const allPasswordRulesMet = ruleLength && ruleLower && ruleUpper && ruleSpecial;
 
-  const allPasswordRulesMet =
-    pwdLengthValid && pwdCaseValid && pwdSpecialValid && pwdUniqueValid;
+  // Password Match Validation
+  const hasConfirmPassword = signUpConfirmPassword.length > 0;
+  const passwordsMatch = hasConfirmPassword && signUpPassword === signUpConfirmPassword;
 
-  // Confirm password validation
-  const passwordsMatch =
-    signupConfirmPassword.length > 0 && signupPassword === signupConfirmPassword;
-  const passwordMismatch =
-    signupConfirmPassword.length > 0 && signupPassword !== signupConfirmPassword;
-
-  // Handle Login Submission
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Sign In Submission
+  const handleSignInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Check credentials (accepts 'admin' / 'Admin@123' or any valid format for demonstration)
-    if (
-      (loginId.trim().toLowerCase() === "admin" && loginPassword === "Admin@123") ||
-      (loginId.trim().length >= 4 && loginPassword.length >= 6 && !loginId.toLowerCase().includes("fail"))
-    ) {
-      setLoginError(false);
-      triggerToast(
-        "Login Successful",
-        `Welcome back to the Nova precision console, ${loginId}!`
-      );
-    } else {
-      setLoginError(true);
-      triggerToast(
-        "Authentication Failed",
-        "Invalid Login Id or Password. Please verify and try again.",
-        true
-      );
-    }
-  };
-
-  // Handle Forgot Password
-  const handleForgotPassword = (e: React.MouseEvent) => {
-    e.preventDefault();
-    triggerToast(
-      "Password Reset",
-      "Password recovery instructions have been dispatched to your verified email."
-    );
-  };
-
-  // Handle Sign Up Submission
-  const handleSignupSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isLoginIdValid) {
-      triggerToast(
-        "Validation Error",
-        "Login ID must be between 6 and 12 characters.",
-        true
-      );
+    if (!signInLoginId.trim() || !signInPassword) {
+      setShowErrorNotice(true);
+      triggerToast("Please enter both Login ID and Password.", "error");
       return;
     }
 
-    if (isDuplicateEmail) {
-      triggerToast(
-        "Email Already Registered",
-        "This email is already in the database. Please use a different email.",
-        true
-      );
+    if (signInLoginId.toLowerCase().includes("fail")) {
+      setShowErrorNotice(true);
+      triggerToast("Auth Gateway returned HTTP 401: Unauthorized", "error");
+      return;
+    }
+
+    setShowErrorNotice(false);
+    triggerToast(`Welcome back, ${signInLoginId}! Authenticating session with Nova ID Core...`, "success");
+  };
+
+  // Sign Up Submission
+  const handleSignUpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isLoginIdValid) {
+      triggerToast("Login ID must be between 6 and 12 characters.", "error");
       return;
     }
 
     if (!isEmailValid) {
-      triggerToast("Invalid Email", "Please enter a valid email address.", true);
+      triggerToast("Please enter a valid corporate or personal Email ID.", "error");
       return;
     }
 
     if (!allPasswordRulesMet) {
-      triggerToast(
-        "Weak Password",
-        "Please satisfy all password complexity criteria.",
-        true
-      );
+      triggerToast("Please satisfy all password complexity criteria.", "error");
       return;
     }
 
     if (!passwordsMatch) {
-      triggerToast(
-        "Password Mismatch",
-        "Please ensure both password entries match before submitting.",
-        true
-      );
+      triggerToast("Passwords do not match. Please re-enter for verification.", "error");
       return;
     }
 
-    if (!agreedToTerms) {
-      triggerToast(
-        "Terms Required",
-        "You must agree to the Terms of Service and Privacy Policy.",
-        true
-      );
-      return;
-    }
+    triggerToast(`Registration successful for ${signUpLoginId}! Confirmation dispatch pending.`, "success");
 
-    triggerToast(
-      "Account Created!",
-      `Registration successful for ${signupLoginId}. Please sign in now.`
-    );
-
-    // Prefill Login ID and switch to Login view
-    setLoginId(signupLoginId);
+    // Auto-transition to Sign In tab with prefilled Login ID
+    setSignInLoginId(signUpLoginId);
     setTimeout(() => {
-      setActiveTab("login");
-      if (isMobileScreen) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      setActiveTab("signin");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }, 1200);
   };
 
-  // Determine which cards to show
-  const showBothSideBySide = isSideBySide && !isMobileScreen;
-  const showLoginCard = showBothSideBySide || activeTab === "login";
-  const showSignUpCard = showBothSideBySide || activeTab === "signup";
+  // Toggle simulation error banner
+  const simulateLoginError = () => {
+    setShowErrorNotice(true);
+    triggerToast("Auth Gateway returned HTTP 401: Unauthorized", "error");
+  };
+
+  // Forgot password action
+  const handleForgotPassword = () => {
+    triggerToast("Recovery email link dispatched to primary vault inbox", "info");
+  };
+
+  // Display conditions
+  const showDualColumn = isLargeScreen && isSideBySide;
+  const showSignInView = showDualColumn || activeTab === "signin";
+  const showSignUpView = showDualColumn || activeTab === "signup";
 
   return (
-    <div className="flex min-h-screen flex-col justify-between bg-background text-foreground selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300">
+    <div className="flex min-h-screen flex-col justify-between bg-surface bg-background text-foreground antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300">
       {/* ========================================================================= */}
-      {/* BEGIN: MainHeader */}
+      {/* 1. FIXED SAFE HEADER (Mobile Stitch Design) */}
       {/* ========================================================================= */}
       <header
-        className="sticky top-0 z-50 w-full border-b border-border/80 bg-card/70 backdrop-blur-md transition-colors duration-300"
+        className="fixed top-0 z-50 w-full border-b border-border/80 bg-background/80 backdrop-blur-xl shadow-sm transition-colors duration-300"
         data-purpose="navigation-header"
       >
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* App Branding Logo */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary-700 via-primary-600 to-sky-400 text-white shadow-m3-1">
-              <ShieldCheck className="h-6 w-6 stroke-[2.2]" />
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+          {/* Brand Logo & Subtitle */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-white shadow-sm">
+              <Fingerprint className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
-              <span className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
-                Nova<span className="text-primary-600 dark:text-primary-400">ID</span>
-                <span className="rounded-full border border-primary-200/60 bg-primary-50 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-primary-600 dark:border-primary-800/40 dark:bg-primary-950/70 dark:text-primary-400">
-                  Auth v4.2
-                </span>
+              <span className="text-lg font-bold tracking-tight text-foreground leading-none">
+                Nova ID
               </span>
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                Wireframe Reference Implementation
+              <span className="font-mono text-xs text-muted-foreground leading-tight">
+                Auth Gateway
               </span>
             </div>
           </div>
 
-          {/* Action items: View Layout Switcher & Dark/Light Mode */}
-          <div className="flex items-center gap-3">
-            {/* Live Layout Switcher (Side-by-Side vs Tabbed Focus) on Large Screens */}
-            {!isMobileScreen && (
+          {/* Header Action Items */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Desktop Side-by-Side Switcher */}
+            {isLargeScreen && (
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="hidden lg:flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground transition-all hover:bg-muted active:scale-95"
                 onClick={() => setIsSideBySide((prev) => !prev)}
-                title="Toggle Side-by-Side or Tabbed Layout"
+                title="Toggle Side-by-Side or Mobile Tabbed View"
               >
                 {isSideBySide ? (
-                  <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                  <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
                 ) : (
-                  <Columns className="h-4 w-4 text-muted-foreground" />
+                  <Columns className="h-3.5 w-3.5 text-muted-foreground" />
                 )}
-                <span>{isSideBySide ? "Tabbed Focus View" : "Side-by-Side View"}</span>
+                <span>{isSideBySide ? "Tabbed View" : "Side-by-Side View"}</span>
               </button>
             )}
+
+            {/* 256-bit Security Pill Badge */}
+            <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 shadow-sm dark:bg-emerald-950/60 dark:text-emerald-300">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span className="font-mono text-xs font-semibold">256-bit</span>
+            </div>
 
             {/* Theme Toggle Button */}
             <button
               type="button"
-              aria-label="Toggle Dark Mode"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground transition-all duration-200 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Toggle Theme"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary-500"
               onClick={() => theme?.toggleTheme()}
             >
               {theme?.darkMode ? (
@@ -305,51 +258,63 @@ export default function IdentityPortalPage() {
           </div>
         </div>
       </header>
-      {/* END: MainHeader */}
 
       {/* ========================================================================= */}
-      {/* BEGIN: MainContent */}
+      {/* 2. MAIN CONTENT AREA */}
       {/* ========================================================================= */}
-      <main
-        className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:py-12"
-        data-purpose="authentication-container"
-      >
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
-          {/* Flow Descriptor Wireframe Header */}
-          <div className="mb-8 max-w-xl text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Identity Portal
-            </h1>
-            <p className="mt-2 text-base text-muted-foreground">
-              Single sign-on and high-assurance credential authentication architecture.
-            </p>
+      <main className="relative flex flex-1 flex-col items-center px-4 pt-20 pb-8 sm:px-6">
+        <div className="flex w-full max-w-md flex-col gap-4 transition-all duration-300 sm:max-w-lg lg:max-w-5xl">
+          {/* Visual Brand Badge & Security Micro-banner */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-primary-600 shadow-sm dark:bg-primary-950/70 dark:text-primary-400">
+                <Shield className="h-4 w-4 stroke-[2.2]" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-bold text-foreground">Nova ID</span>
+                <span className="rounded-full bg-surface-container-high bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-muted-foreground leading-tight">
+                  AUTH v4.2
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 rounded-full bg-muted/80 px-2.5 py-1 text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-mono text-xs">TLS 1.3 Active</span>
+            </div>
           </div>
 
-          {/* Global Segmented Navigation Control (Visible in Tabbed Mode or Mobile) */}
-          {(!showBothSideBySide || isMobileScreen) && (
-            <div
-              className="mb-8 flex w-full max-w-md items-center justify-between rounded-2xl border border-border bg-muted/70 p-1.5 backdrop-blur transition-all duration-300 dark:bg-muted/30"
-              id="tabNavigationControls"
-            >
+          {/* Segmented Tab Switcher with Sliding Glider */}
+          {(!showDualColumn || !isLargeScreen) && (
+            <div className="relative flex items-center rounded-xl bg-muted/80 p-1 shadow-sm transition-all dark:bg-muted/40">
+              {/* Animated Glider Background */}
+              <div
+                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg bg-card shadow-sm transition-transform duration-300 ease-out pointer-events-none ${
+                  activeTab === "signin" ? "translate-x-0 left-1" : "translate-x-full left-1"
+                }`}
+              />
+
+              {/* Sign In Tab Button */}
               <button
                 type="button"
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 ${
-                  activeTab === "login"
-                    ? "bg-card font-semibold text-primary-600 shadow-sm dark:text-primary-400"
-                    : "text-muted-foreground hover:text-foreground"
+                className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2.5 text-center text-sm transition-colors active:scale-95 ${
+                  activeTab === "signin"
+                    ? "font-semibold text-primary-600 dark:text-primary-400"
+                    : "font-medium text-muted-foreground hover:text-foreground"
                 }`}
-                onClick={() => setActiveTab("login")}
+                onClick={() => setActiveTab("signin")}
               >
                 <LogIn className="h-4 w-4" />
                 <span>Sign In</span>
               </button>
 
+              {/* Sign Up Tab Button */}
               <button
                 type="button"
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-sm font-medium transition-all duration-200 ${
+                className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 py-2.5 text-center text-sm transition-colors active:scale-95 ${
                   activeTab === "signup"
-                    ? "bg-card font-semibold text-primary-600 shadow-sm dark:text-primary-400"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "font-semibold text-primary-600 dark:text-primary-400"
+                    : "font-medium text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setActiveTab("signup")}
               >
@@ -359,129 +324,125 @@ export default function IdentityPortalPage() {
             </div>
           )}
 
-          {/* Container: Side-by-Side or Centered Tabbed Card */}
+          {/* Interactive Notice Alert Banner (Simulated Error Demo from wireframe spec) */}
+          {showErrorNotice && (
+            <div
+              role="alert"
+              className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-destructive shadow-sm transition-all duration-300 dark:bg-destructive/20"
+            >
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div className="flex flex-1 flex-col">
+                <span className="text-sm font-semibold">Authentication Alert</span>
+                <span className="text-xs leading-tight opacity-90">
+                  Invalid Login Id or Password. Please verify credentials conforming to Nova vault policy.
+                </span>
+              </div>
+              <button
+                type="button"
+                aria-label="Close error notice"
+                onClick={() => setShowErrorNotice(false)}
+                className="p-1 hover:opacity-70 active:scale-90"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* AUTH CARDS WRAPPER */}
+          {/* ===================================================================== */}
           <div
-            className={`flex w-full flex-col items-stretch justify-center gap-8 transition-all duration-300 ${
-              showBothSideBySide ? "lg:max-w-5xl lg:flex-row" : "max-w-md"
+            className={`flex w-full flex-col gap-6 ${
+              showDualColumn ? "lg:flex-row lg:items-stretch" : ""
             }`}
           >
-            {/* ========================================================================= */}
-            {/* BEGIN: LoginCard */}
-            {/* ========================================================================= */}
-            {showLoginCard && (
+            {/* ----------------------------------------------------------------- */}
+            {/* SUB-VIEW 1: SIGN IN CARD */}
+            {/* ----------------------------------------------------------------- */}
+            {showSignInView && (
               <div
-                className="flex w-full flex-1 flex-col rounded-2xl border border-border bg-card shadow-m3-1 transition-all duration-200 hover:shadow-m3-2"
-                data-purpose="login-card"
+                className="flex w-full flex-1 flex-col justify-between overflow-hidden rounded-xl border border-border bg-card p-6 shadow-md transition-all duration-200 hover:shadow-lg sm:p-7"
+                id="viewSignIn"
               >
-                {/* Card Header with Wireframe Logo Box */}
-                <div className="flex flex-col items-center border-b border-border/50 p-6 pb-4 text-center sm:p-8">
-                  <div className="mb-4 flex h-14 w-16 items-center justify-center rounded-xl border border-primary-200 bg-primary-50 text-primary-600 shadow-inner dark:border-primary-800 dark:bg-primary-950/50 dark:text-primary-400">
-                    <Fingerprint className="h-7 w-7" />
-                  </div>
-                  <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                    Welcome Back
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Sign in with your verified credentials
-                  </p>
-                </div>
-
-                {/* Card Content / Login Form */}
-                <div className="flex flex-1 flex-col justify-between p-6 sm:p-8">
-                  {/* Error Alert Area */}
-                  {loginError && (
-                    <div
-                      className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
-                      role="alert"
-                    >
-                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
-                      <div className="flex-1">
-                        <span className="block text-sm font-semibold">
-                          Authentication Failed
-                        </span>
-                        <span className="text-xs">
-                          Invalid Login Id or Password. Please verify and try again.
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="text-red-500 hover:text-red-700 dark:hover:text-red-300"
-                        onClick={() => setLoginError(false)}
-                        aria-label="Dismiss error"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                <div className="flex flex-col gap-4">
+                  {/* Card Header */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <BadgeCheck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                      <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                        Welcome Back
+                      </h1>
                     </div>
-                  )}
+                    <p className="text-xs text-muted-foreground sm:text-sm">
+                      Sign in with your verified Nova ID credentials
+                    </p>
+                  </div>
 
-                  <form className="space-y-5" onSubmit={handleLoginSubmit}>
-                    {/* Login Id Field */}
-                    <div className="space-y-2">
+                  {/* Form */}
+                  <form className="mt-2 flex flex-col gap-4" onSubmit={handleSignInSubmit}>
+                    {/* Field: Login ID */}
+                    <div className="flex flex-col gap-1.5">
                       <label
-                        className="block text-sm font-medium text-foreground"
-                        htmlFor="loginUserId"
+                        className="text-xs font-medium text-foreground sm:text-sm"
+                        htmlFor="signinLoginId"
                       >
-                        Login Id <span className="text-red-500">*</span>
+                        Login ID
                       </label>
-                      <div className="relative rounded-xl shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
-                          <User className="h-4 w-4" />
-                        </div>
+                      <div className="relative flex items-center">
+                        <User className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
                         <input
-                          id="loginUserId"
+                          id="signinLoginId"
                           type="text"
                           required
-                          value={loginId}
+                          value={signInLoginId}
                           onChange={(e) => {
-                            setLoginId(e.target.value);
-                            if (loginError) setLoginError(false);
+                            setSignInLoginId(e.target.value);
+                            if (showErrorNotice) setShowErrorNotice(false);
                           }}
                           placeholder="Enter your Login ID"
-                          className="block w-full rounded-xl border border-border bg-background py-3 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-600"
+                          className="h-12 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary-500 focus:bg-background focus:ring-2 focus:ring-primary-500/20"
                         />
                       </div>
                     </div>
 
-                    {/* Password Field */}
-                    <div className="space-y-2">
+                    {/* Field: Password */}
+                    <div className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
                         <label
-                          className="block text-sm font-medium text-foreground"
-                          htmlFor="loginPassword"
+                          className="text-xs font-medium text-foreground sm:text-sm"
+                          htmlFor="signinPassword"
                         >
-                          Password <span className="text-red-500">*</span>
+                          Password
                         </label>
                         <button
                           type="button"
                           onClick={handleForgotPassword}
-                          className="text-xs font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                          className="text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline active:opacity-80 dark:text-primary-400"
                         >
                           Forgot Password?
                         </button>
                       </div>
-                      <div className="relative rounded-xl shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
-                          <Lock className="h-4 w-4" />
-                        </div>
+                      <div className="relative flex items-center">
+                        <Key className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
                         <input
-                          id="loginPassword"
-                          type={showLoginPassword ? "text" : "password"}
+                          id="signinPassword"
+                          type={showSignInPassword ? "text" : "password"}
                           required
-                          value={loginPassword}
+                          value={signInPassword}
                           onChange={(e) => {
-                            setLoginPassword(e.target.value);
-                            if (loginError) setLoginError(false);
+                            setSignInPassword(e.target.value);
+                            if (showErrorNotice) setShowErrorNotice(false);
                           }}
-                          placeholder="Enter your password"
-                          className="block w-full rounded-xl border border-border bg-background py-3 pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground transition duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-600"
+                          placeholder="Enter your Password"
+                          className="h-12 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary-500 focus:bg-background focus:ring-2 focus:ring-primary-500/20"
                         />
                         <button
                           type="button"
-                          aria-label={showLoginPassword ? "Hide password" : "Show password"}
-                          onClick={() => setShowLoginPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground focus:outline-none"
+                          aria-label={showSignInPassword ? "Hide password" : "Show password"}
+                          onClick={() => setShowSignInPassword((prev) => !prev)}
+                          className="absolute right-3 flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground active:scale-95"
                         >
-                          {showLoginPassword ? (
+                          {showSignInPassword ? (
                             <EyeOff className="h-4 w-4" />
                           ) : (
                             <Eye className="h-4 w-4" />
@@ -490,207 +451,196 @@ export default function IdentityPortalPage() {
                       </div>
                     </div>
 
-                    {/* Remember Device Checkbox */}
-                    <div className="flex items-center pt-1">
+                    {/* Remember Me Checkbox */}
+                    <label
+                      htmlFor={rememberMeId}
+                      className="flex cursor-pointer items-center gap-2 select-none py-1"
+                    >
                       <input
                         id={rememberMeId}
-                        name="remember-me"
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-4 w-4 rounded border-border bg-background text-primary-600 focus:ring-primary-500"
+                        className="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500"
                       />
-                      <label
-                        htmlFor={rememberMeId}
-                        className="ml-2.5 block select-none text-xs text-muted-foreground"
-                      >
-                        Keep me logged in on this browser
-                      </label>
-                    </div>
+                      <span className="text-xs text-muted-foreground sm:text-sm">
+                        Keep me logged in on this device
+                      </span>
+                    </label>
 
-                    {/* Submit Button */}
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 py-3.5 px-4 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                      >
-                        <span>SIGN IN</span>
-                        <ArrowRight className="h-4 w-4 stroke-[2.5]" />
-                      </button>
-                    </div>
+                    {/* Primary Submit Action */}
+                    <button
+                      type="submit"
+                      className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 font-semibold tracking-wide text-white shadow-sm transition-all duration-150 hover:bg-primary-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                    >
+                      <span>SIGN IN</span>
+                      <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                    </button>
                   </form>
+                </div>
 
-                  {/* Card Footer Switcher */}
-                  <div className="mt-8 border-t border-border/60 pt-6 text-center">
-                    <p className="text-sm text-muted-foreground">
+                {/* Footer Controls & Wireframe Specs */}
+                <div className="mt-6 flex flex-col gap-3 border-t border-border/60 pt-4">
+                  {/* Demo trigger for UX verification */}
+                  <div className="flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      onClick={simulateLoginError}
+                      className="flex items-center gap-1 font-mono text-muted-foreground transition-colors hover:text-destructive active:scale-95"
+                    >
+                      <Bug className="h-3.5 w-3.5" />
+                      <span>Simulate Auth Error State</span>
+                    </button>
+                    <span className="flex items-center gap-1 font-mono text-emerald-600 dark:text-emerald-400">
+                      <Shield className="h-3.5 w-3.5" />
+                      <span>FIPS 140-3</span>
+                    </span>
+                  </div>
+
+                  {/* Alternate Switcher Prompt */}
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground sm:text-sm">
                       Don&apos;t have an account?{" "}
                       <button
                         type="button"
                         onClick={() => {
                           setActiveTab("signup");
-                          if (isMobileScreen) {
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }
+                          window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
-                        className="ml-1 inline-flex items-center gap-1 font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                        className="font-semibold text-primary-600 hover:underline active:opacity-80 dark:text-primary-400 ml-1"
                       >
-                        <span>Sign Up</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        Sign Up
                       </button>
                     </p>
                   </div>
                 </div>
               </div>
             )}
-            {/* END: LoginCard */}
 
-            {/* ========================================================================= */}
-            {/* BEGIN: SignUpCard */}
-            {/* ========================================================================= */}
-            {showSignUpCard && (
+            {/* ----------------------------------------------------------------- */}
+            {/* SUB-VIEW 2: SIGN UP CARD */}
+            {/* ----------------------------------------------------------------- */}
+            {showSignUpView && (
               <div
-                className="flex w-full flex-1 flex-col rounded-2xl border border-border bg-card shadow-m3-1 transition-all duration-200 hover:shadow-m3-2"
-                data-purpose="signup-card"
+                className="flex w-full flex-1 flex-col justify-between overflow-hidden rounded-xl border border-border bg-card p-6 shadow-md transition-all duration-200 hover:shadow-lg sm:p-7"
+                id="viewSignUp"
               >
-                {/* Card Header with Wireframe Logo Box */}
-                <div className="flex flex-col items-center border-b border-border/50 p-6 pb-4 text-center sm:p-8">
-                  <div className="mb-4 flex h-14 w-16 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-600 shadow-inner dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-400">
-                    <UserCheck className="h-7 w-7" />
+                <div className="flex flex-col gap-4">
+                  {/* Card Header */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                      <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                        Create Account
+                      </h1>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:text-sm">
+                      Enter credentials conforming to security architecture
+                    </p>
                   </div>
-                  <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                    Create New Account
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Join the network and securely manage access
-                  </p>
-                </div>
 
-                {/* Card Content / Sign Up Form */}
-                <div className="flex flex-1 flex-col justify-between p-6 sm:p-8">
-                  <form className="space-y-4" onSubmit={handleSignupSubmit}>
-                    {/* 1. Enter Login Id (6-12 chars) */}
-                    <div className="space-y-1.5">
+                  {/* Form */}
+                  <form className="mt-1 flex flex-col gap-3.5" onSubmit={handleSignUpSubmit}>
+                    {/* Field 1: Login ID with Character Count */}
+                    <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <label
-                          className="block text-sm font-medium text-foreground"
+                          className="text-xs font-medium text-foreground sm:text-sm"
                           htmlFor="signupLoginId"
                         >
-                          Enter Login Id <span className="text-red-500">*</span>
+                          Login Id
                         </label>
                         <span
-                          className={`rounded-md px-2 py-0.5 font-mono text-[11px] font-medium transition-colors ${
+                          className={`font-mono text-xs font-medium transition-colors ${
                             isLoginIdValid
-                              ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
-                              : "bg-muted text-muted-foreground"
+                              ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                              : loginIdCount > 0
+                              ? "text-destructive"
+                              : "text-muted-foreground"
                           }`}
                         >
-                          {signupLoginId.length}/12
+                          {loginIdCount}/12
                         </span>
                       </div>
-                      <div className="relative rounded-xl shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
-                          <AtSign className="h-4 w-4" />
-                        </div>
+                      <div className="relative flex items-center">
+                        <AtSign className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
                         <input
                           id="signupLoginId"
                           type="text"
                           required
                           maxLength={12}
-                          value={signupLoginId}
-                          onChange={(e) => setSignupLoginId(e.target.value)}
-                          placeholder="e.g. john_doe99"
-                          className="block w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-600"
+                          value={signUpLoginId}
+                          onChange={(e) => setSignUpLoginId(e.target.value)}
+                          placeholder="Choose a unique Login ID"
+                          className="h-12 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary-500 focus:bg-background focus:ring-2 focus:ring-primary-500/20"
                         />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5">
+                        <div className="pointer-events-none absolute right-3">
                           {isLoginIdValid && (
-                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                           )}
                         </div>
                       </div>
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Info className="h-3.5 w-3.5 shrink-0" />
-                        <span>Must be unique and between 6-12 characters.</span>
-                      </p>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        6-12 characters, unique handle
+                      </span>
                     </div>
 
-                    {/* 2. Enter Email Id */}
-                    <div className="space-y-1.5">
+                    {/* Field 2: Email ID */}
+                    <div className="flex flex-col gap-1">
                       <label
-                        className="block text-sm font-medium text-foreground"
+                        className="text-xs font-medium text-foreground sm:text-sm"
                         htmlFor="signupEmail"
                       >
-                        Enter Email Id <span className="text-red-500">*</span>
+                        Email Id
                       </label>
-                      <div className="relative rounded-xl shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                        </div>
+                      <div className="relative flex items-center">
+                        <Mail className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
                         <input
                           id="signupEmail"
                           type="email"
                           required
-                          value={signupEmail}
-                          onChange={(e) => setSignupEmail(e.target.value)}
-                          placeholder="name@domain.com"
-                          className="block w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-600"
+                          value={signUpEmail}
+                          onChange={(e) => setSignUpEmail(e.target.value)}
+                          placeholder="Enter corporate or personal Email ID"
+                          className="h-12 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary-500 focus:bg-background focus:ring-2 focus:ring-primary-500/20"
                         />
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5">
-                          {isDuplicateEmail && (
-                            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          )}
-                          {!isDuplicateEmail && isEmailValid && (
-                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <div className="pointer-events-none absolute right-3">
+                          {isEmailValid && (
+                            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                           )}
                         </div>
                       </div>
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                        {isDuplicateEmail ? (
-                          <span className="font-medium text-red-600 dark:text-red-400">
-                            This email is already registered in database.
-                          </span>
-                        ) : isEmailValid ? (
-                          <span className="font-medium text-green-600 dark:text-green-400">
-                            Email is available and formatted correctly.
-                          </span>
-                        ) : (
-                          <>
-                            <Info className="h-3.5 w-3.5 shrink-0" />
-                            <span>Must not be a duplicate in database.</span>
-                          </>
-                        )}
-                      </p>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        Unique identifier in database
+                      </span>
                     </div>
 
-                    {/* 3. Enter Password with Requirements */}
-                    <div className="space-y-1.5">
+                    {/* Field 3: Password with Live Checklist */}
+                    <div className="flex flex-col gap-1.5">
                       <label
-                        className="block text-sm font-medium text-foreground"
+                        className="text-xs font-medium text-foreground sm:text-sm"
                         htmlFor="signupPassword"
                       >
-                        Enter Password <span className="text-red-500">*</span>
+                        Password
                       </label>
-                      <div className="relative rounded-xl shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
-                          <KeyRound className="h-4 w-4" />
-                        </div>
+                      <div className="relative flex items-center">
+                        <Lock className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
                         <input
                           id="signupPassword"
-                          type={showSignupPassword ? "text" : "password"}
+                          type={showSignUpPassword ? "text" : "password"}
                           required
-                          value={signupPassword}
-                          onChange={(e) => setSignupPassword(e.target.value)}
-                          placeholder="Create complex password"
-                          className="block w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground transition duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-600"
+                          value={signUpPassword}
+                          onChange={(e) => setSignUpPassword(e.target.value)}
+                          placeholder="Create strong passphrase"
+                          className="h-12 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary-500 focus:bg-background focus:ring-2 focus:ring-primary-500/20"
                         />
                         <button
                           type="button"
-                          aria-label={
-                            showSignupPassword ? "Hide password" : "Show password"
-                          }
-                          onClick={() => setShowSignupPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground focus:outline-none"
+                          aria-label={showSignUpPassword ? "Hide password" : "Show password"}
+                          onClick={() => setShowSignUpPassword((prev) => !prev)}
+                          className="absolute right-3 flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground active:scale-95"
                         >
-                          {showSignupPassword ? (
+                          {showSignUpPassword ? (
                             <EyeOff className="h-4 w-4" />
                           ) : (
                             <Eye className="h-4 w-4" />
@@ -698,265 +648,203 @@ export default function IdentityPortalPage() {
                         </button>
                       </div>
 
-                      {/* Password Requirements Checklist Badges */}
-                      <div className="grid grid-cols-2 gap-1.5 pt-1.5 text-xs text-muted-foreground">
+                      {/* Dynamic Security Rules Pill Grid (2x2) */}
+                      <div className="mt-1 grid grid-cols-2 gap-1.5 rounded-lg border border-border/70 bg-muted/50 p-2.5">
                         <div
-                          className={`flex items-center gap-1.5 text-[11px] transition-colors ${
-                            pwdLengthValid
-                              ? "font-medium text-green-600 dark:text-green-400"
+                          className={`flex items-center gap-1.5 text-xs transition-colors ${
+                            ruleLength
+                              ? "font-medium text-emerald-600 dark:text-emerald-400"
                               : "text-muted-foreground"
                           }`}
                         >
-                          {pwdLengthValid ? (
-                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          {ruleLength ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                           ) : (
-                            <Circle className="h-3 w-3 shrink-0" />
+                            <Circle className="h-3.5 w-3.5 shrink-0" />
                           )}
-                          <span>&gt; 8 characters</span>
+                          <span className="font-mono text-[11px]">&gt; 8 characters</span>
                         </div>
 
                         <div
-                          className={`flex items-center gap-1.5 text-[11px] transition-colors ${
-                            pwdCaseValid
-                              ? "font-medium text-green-600 dark:text-green-400"
+                          className={`flex items-center gap-1.5 text-xs transition-colors ${
+                            ruleLower
+                              ? "font-medium text-emerald-600 dark:text-emerald-400"
                               : "text-muted-foreground"
                           }`}
                         >
-                          {pwdCaseValid ? (
-                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          {ruleLower ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                           ) : (
-                            <Circle className="h-3 w-3 shrink-0" />
+                            <Circle className="h-3.5 w-3.5 shrink-0" />
                           )}
-                          <span>Lower &amp; Upper case</span>
+                          <span className="font-mono text-[11px]">One lowercase</span>
                         </div>
 
                         <div
-                          className={`flex items-center gap-1.5 text-[11px] transition-colors ${
-                            pwdSpecialValid
-                              ? "font-medium text-green-600 dark:text-green-400"
+                          className={`flex items-center gap-1.5 text-xs transition-colors ${
+                            ruleUpper
+                              ? "font-medium text-emerald-600 dark:text-emerald-400"
                               : "text-muted-foreground"
                           }`}
                         >
-                          {pwdSpecialValid ? (
-                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          {ruleUpper ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                           ) : (
-                            <Circle className="h-3 w-3 shrink-0" />
+                            <Circle className="h-3.5 w-3.5 shrink-0" />
                           )}
-                          <span>Special character (!@#$)</span>
+                          <span className="font-mono text-[11px]">One uppercase</span>
                         </div>
 
                         <div
-                          className={`flex items-center gap-1.5 text-[11px] transition-colors ${
-                            pwdUniqueValid
-                              ? "font-medium text-green-600 dark:text-green-400"
+                          className={`flex items-center gap-1.5 text-xs transition-colors ${
+                            ruleSpecial
+                              ? "font-medium text-emerald-600 dark:text-emerald-400"
                               : "text-muted-foreground"
                           }`}
                         >
-                          {pwdUniqueValid ? (
-                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          {ruleSpecial ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                           ) : (
-                            <Circle className="h-3 w-3 shrink-0" />
+                            <Circle className="h-3.5 w-3.5 shrink-0" />
                           )}
-                          <span>Unique &amp; non-common</span>
+                          <span className="font-mono text-[11px]">One special symbol</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* 4. Re-Enter Password */}
-                    <div className="space-y-1.5">
-                      <label
-                        className="block text-sm font-medium text-foreground"
-                        htmlFor="signupConfirmPassword"
-                      >
-                        Re-Enter Password <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative rounded-xl shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
-                          <Lock className="h-4 w-4" />
-                        </div>
+                    {/* Field 4: Re-Enter Password */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <label
+                          className="text-xs font-medium text-foreground sm:text-sm"
+                          htmlFor="signupConfirmPassword"
+                        >
+                          Re-Enter Password
+                        </label>
+                        {hasConfirmPassword && (
+                          <span
+                            className={`font-mono text-xs font-semibold ${
+                              passwordsMatch
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-destructive"
+                            }`}
+                          >
+                            {passwordsMatch ? "Passwords Match" : "Mismatch"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative flex items-center">
+                        <ShieldCheck className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
                         <input
                           id="signupConfirmPassword"
-                          type={showSignupConfirmPassword ? "text" : "password"}
+                          type={showSignUpConfirmPassword ? "text" : "password"}
                           required
-                          value={signupConfirmPassword}
-                          onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                          placeholder="Repeat password to verify"
-                          className="block w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground transition duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-600"
+                          value={signUpConfirmPassword}
+                          onChange={(e) => setSignUpConfirmPassword(e.target.value)}
+                          placeholder="Re-enter password for verification"
+                          className="h-12 w-full rounded-lg border border-border bg-muted/40 pl-10 pr-11 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary-500 focus:bg-background focus:ring-2 focus:ring-primary-500/20"
                         />
                         <button
                           type="button"
                           aria-label={
-                            showSignupConfirmPassword
-                              ? "Hide confirm password"
-                              : "Show confirm password"
+                            showSignUpConfirmPassword ? "Hide password" : "Show password"
                           }
-                          onClick={() => setShowSignupConfirmPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground focus:outline-none"
+                          onClick={() => setShowSignUpConfirmPassword((prev) => !prev)}
+                          className="absolute right-3 flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground active:scale-95"
                         >
-                          {showSignupConfirmPassword ? (
+                          {showSignUpConfirmPassword ? (
                             <EyeOff className="h-4 w-4" />
                           ) : (
                             <Eye className="h-4 w-4" />
                           )}
                         </button>
                       </div>
-
-                      {passwordsMatch && (
-                        <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                          <Check className="h-3.5 w-3.5" />
-                          <span>Passwords match.</span>
-                        </p>
-                      )}
-
-                      {passwordMismatch && (
-                        <p className="mt-1 flex items-center gap-1 text-xs text-red-500">
-                          <X className="h-3.5 w-3.5" />
-                          <span>Passwords do not match.</span>
-                        </p>
-                      )}
                     </div>
 
-                    {/* Terms Agreement */}
-                    <div className="flex items-start pt-2">
-                      <input
-                        id={termsId}
-                        name="terms"
-                        type="checkbox"
-                        required
-                        checked={agreedToTerms}
-                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 rounded border-border bg-background text-primary-600 focus:ring-primary-500"
-                      />
-                      <label
-                        htmlFor={termsId}
-                        className="ml-2.5 block select-none text-xs text-muted-foreground"
-                      >
-                        I agree to the{" "}
-                        <Link href="#terms" className="text-primary-600 hover:underline dark:text-primary-400">
-                          Terms of Service
-                        </Link>{" "}
-                        and{" "}
-                        <Link href="#privacy" className="text-primary-600 hover:underline dark:text-primary-400">
-                          Privacy Policy
-                        </Link>
-                        .
-                      </label>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 py-3.5 px-4 text-base font-semibold text-white shadow-md transition-all duration-200 hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                      >
-                        <span>SIGN UP</span>
-                        <UserPlus className="h-4 w-4 stroke-[2.5]" />
-                      </button>
-                    </div>
+                    {/* Primary Submit Action */}
+                    <button
+                      type="submit"
+                      className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 font-semibold tracking-wide text-white shadow-sm transition-all duration-150 hover:bg-primary-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                    >
+                      <span>SIGN UP</span>
+                      <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                    </button>
                   </form>
+                </div>
 
-                  {/* Card Footer Switcher */}
-                  <div className="mt-8 border-t border-border/60 pt-6 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Already have an account?{" "}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveTab("login");
-                          if (isMobileScreen) {
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }
-                        }}
-                        className="ml-1 inline-flex items-center gap-1 font-semibold text-primary-600 hover:underline dark:text-primary-400"
-                      >
-                        <span>Sign In</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </p>
-                  </div>
+                {/* Footer Switcher Prompt */}
+                <div className="mt-6 border-t border-border/60 pt-4 text-center">
+                  <p className="text-xs text-muted-foreground sm:text-sm">
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("signin");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="font-semibold text-primary-600 hover:underline active:opacity-80 dark:text-primary-400 ml-1"
+                    >
+                      Sign In
+                    </button>
+                  </p>
                 </div>
               </div>
             )}
-            {/* END: SignUpCard */}
+          </div>
+
+          {/* Wireframe Specification & System Reference Card */}
+          <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/40 p-4 shadow-sm">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-foreground">Nova Security Center</span>
+              <span className="font-mono text-[11px] text-muted-foreground">SOC v4.2 Verification</span>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                triggerToast(
+                  "Connecting to Nova ID 24/7 Security Operations Center...",
+                  "info"
+                )
+              }
+              className="rounded-lg px-3 py-1.5 font-mono text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-50 active:scale-95 dark:text-primary-400 dark:hover:bg-primary-950/60"
+            >
+              Support
+            </button>
           </div>
         </div>
 
-        {/* Feedback / Success Toast Notification matching wireframe */}
+        {/* Floating Toast Notification (Matching Stitch mobile bottom toast) */}
         <div
           role="status"
           aria-live="polite"
-          className={`fixed bottom-6 right-6 z-50 flex w-full max-w-sm items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-m3-3 transition-all duration-300 ${
-            toast.visible
+          className={`fixed bottom-6 left-4 right-4 z-50 mx-auto flex max-w-sm items-center gap-2.5 rounded-xl border border-border/70 bg-foreground/95 px-4 py-3 text-background shadow-lg backdrop-blur-md transition-all duration-300 ${
+            floatingToast.visible
               ? "translate-y-0 opacity-100 pointer-events-auto"
-              : "pointer-events-none translate-y-24 opacity-0"
+              : "pointer-events-none translate-y-16 opacity-0"
           }`}
         >
-          <div
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-              toast.isError
-                ? "bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400"
-                : "bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400"
-            }`}
-          >
-            {toast.isError ? (
-              <AlertCircle className="h-5 w-5" />
-            ) : (
-              <Check className="h-5 w-5" />
-            )}
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-semibold text-foreground">{toast.title}</h4>
-            <p className="mt-0.5 text-xs text-muted-foreground">{toast.message}</p>
-          </div>
+          {floatingToast.type === "error" ? (
+            <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
+          ) : floatingToast.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+          ) : (
+            <Info className="h-5 w-5 shrink-0 text-sky-400" />
+          )}
+          <span className="flex-1 text-xs font-medium leading-snug sm:text-sm">
+            {floatingToast.message}
+          </span>
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => setToast((prev) => ({ ...prev, visible: false }))}
-            aria-label="Close notification"
+            aria-label="Dismiss toast"
+            onClick={() => setFloatingToast((prev) => ({ ...prev, visible: false }))}
+            className="p-1 text-background/70 hover:text-background active:scale-90"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       </main>
-      {/* END: MainContent */}
-
-      {/* ========================================================================= */}
-      {/* BEGIN: MainFooter */}
-      {/* ========================================================================= */}
-      <footer
-        className="w-full border-t border-border py-6 text-center text-xs text-muted-foreground"
-        data-purpose="page-footer"
-      >
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground">Nova Precision UI</span>
-            <span>&bull;</span>
-            <span>Strict Wireframe Compliance</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="#help"
-              className="transition-colors hover:text-foreground"
-            >
-              Documentation
-            </Link>
-            <Link
-              href="#security"
-              className="transition-colors hover:text-foreground"
-            >
-              Security Whitepaper
-            </Link>
-            <Link
-              href="#contact"
-              className="transition-colors hover:text-foreground"
-            >
-              Support Desk
-            </Link>
-          </div>
-        </div>
-      </footer>
-      {/* END: MainFooter */}
     </div>
   );
 }
+
 
