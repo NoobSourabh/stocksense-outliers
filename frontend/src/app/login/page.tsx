@@ -2,6 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Check, Eye, EyeOff, Fingerprint, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 
 type AuthMode = "signin" | "signup";
 
@@ -13,7 +17,7 @@ export default function LoginPage() {
 
   const isSignup = mode === "signup";
   const passwordRequirements = [
-    { label: "At least 9 characters", met: signUpPassword.length >= 9 },
+    { label: "At least 8 characters", met: signUpPassword.length >= 8 },
     { label: "One uppercase letter", met: /[A-Z]/.test(signUpPassword) },
     { label: "One lowercase letter", met: /[a-z]/.test(signUpPassword) },
     { label: "One symbol", met: /[!@#$%^&*(),.?":{}|<>]/.test(signUpPassword) },
@@ -24,8 +28,8 @@ export default function LoginPage() {
     const values = new FormData(event.currentTarget);
     const password = String(values.get("password") ?? "");
     if (isSignup) {
-      if (password.length < 9 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-        setNotice("Use at least 9 characters, with uppercase, lowercase, and a symbol.");
+      if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        setNotice("Use at least 8 characters, with uppercase, lowercase, and a symbol.");
         return;
       }
       if (password !== values.get("confirmPassword")) {
@@ -54,29 +58,29 @@ export default function LoginPage() {
           </p>
         </header>
 
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8">
+        <Card className="gap-0 rounded-2xl border border-border p-5 shadow-sm sm:p-8">
           <div className="mb-6 grid grid-cols-2 rounded-lg bg-muted p-1" role="tablist" aria-label="Account access">
             {(["signin", "signup"] as const).map((tab) => (
-              <button
+              <Button
                 key={tab}
                 type="button"
-                role="tab"
-                aria-selected={mode === tab}
+                variant={mode === tab ? "secondary" : "ghost"}
+                aria-pressed={mode === tab}
                 onClick={() => { setMode(tab); setNotice(""); }}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                className={`h-9 rounded-md px-3 text-sm font-medium ${mode === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
               >
                 {tab === "signin" ? "Sign in" : "Create account"}
-              </button>
+              </Button>
             ))}
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {isSignup && (
               <div className="space-y-1.5">
-                <label htmlFor="login-id" className="text-sm font-medium">Login ID</label>
+                <Label htmlFor="login-id">Login ID</Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                  <input id="login-id" name="loginId" required minLength={6} maxLength={12} autoComplete="username" placeholder="Choose a 6–12 character ID" className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  <Input id="login-id" name="loginId" required minLength={6} maxLength={12} autoComplete="username" placeholder="Choose a 6–12 character ID" className="h-11 rounded-lg bg-background pl-10 pr-3 text-sm" />
                 </div>
                 <p className="text-xs text-muted-foreground">You’ll use this ID whenever you sign in.</p>
               </div>
@@ -84,35 +88,35 @@ export default function LoginPage() {
 
             {isSignup && (
               <div className="space-y-1.5">
-                <label htmlFor="email" className="text-sm font-medium">Email address</label>
+                <Label htmlFor="email">Email address</Label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                  <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  <Input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className="h-11 rounded-lg bg-background pl-10 pr-3 text-sm" />
                 </div>
               </div>
             )}
 
             {!isSignup && (
               <div className="space-y-1.5">
-                <label htmlFor="signin-id" className="text-sm font-medium">Login ID</label>
+                <Label htmlFor="signin-id">Login ID</Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                  <input id="signin-id" name="loginId" required autoComplete="username" placeholder="Enter your Login ID" className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                  <Input id="signin-id" name="loginId" required autoComplete="username" placeholder="Enter your Login ID" className="h-11 rounded-lg bg-background pl-10 pr-3 text-sm" />
                 </div>
               </div>
             )}
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
-                <label htmlFor="password" className="text-sm font-medium">Password</label>
-                {!isSignup && <button type="button" onClick={() => setNotice("Password recovery instructions will be sent to your registered email.")} className="text-xs font-medium text-primary hover:underline">Forgot password?</button>}
+                <Label htmlFor="password">Password</Label>
+                {!isSignup && <Button type="button" variant="link" size="xs" onClick={() => setNotice("Password recovery instructions will be sent to your registered email.")} className="h-auto p-0 text-xs font-medium">Forgot password?</Button>}
               </div>
               <div className="relative">
                 <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                <input id="password" name="password" type={showPassword ? "text" : "password"} required minLength={isSignup ? 9 : undefined} autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Enter your password"} value={isSignup ? signUpPassword : undefined} onChange={isSignup ? (event) => { setSignUpPassword(event.target.value); setNotice(""); } : undefined} className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-11 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+                <Input id="password" name="password" type={showPassword ? "text" : "password"} required minLength={isSignup ? 8 : undefined} autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Enter your password"} value={isSignup ? signUpPassword : undefined} onChange={isSignup ? (event) => { setSignUpPassword(event.target.value); setNotice(""); } : undefined} className="h-11 rounded-lg bg-background pl-10 pr-11 text-sm" />
+                <Button type="button" variant="ghost" size="icon" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground">
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+                </Button>
               </div>
               {isSignup && (
                 <ul aria-label="Password requirements" aria-live="polite" className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -130,20 +134,18 @@ export default function LoginPage() {
 
             {isSignup && (
               <div className="space-y-1.5">
-                <label htmlFor="confirm-password" className="text-sm font-medium">Confirm password</label>
-                <input id="confirm-password" name="confirmPassword" type={showPassword ? "text" : "password"} required minLength={9} autoComplete="new-password" placeholder="Enter your password again" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Input id="confirm-password" name="confirmPassword" type={showPassword ? "text" : "password"} required minLength={8} autoComplete="new-password" placeholder="Enter your password again" className="h-11 rounded-lg bg-background px-3 text-sm" />
               </div>
             )}
 
             {notice && <p role="status" className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground">{notice}</p>}
 
-            <button type="submit" className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              {isSignup ? "Create account" : "Sign in"}<ArrowRight className="size-4" aria-hidden="true" />
-            </button>
+            <Button type="submit" className="h-11 w-full gap-2 rounded-lg px-4 text-sm font-semibold">{isSignup ? "Create account" : "Sign in"}<ArrowRight className="size-4" aria-hidden="true" /></Button>
           </form>
 
           <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">Your account is protected with secure sign-in.</p>
-        </section>
+        </Card>
         <p className="mt-5 text-center text-xs text-muted-foreground">Need help? Contact support.</p>
       </div>
     </main>
