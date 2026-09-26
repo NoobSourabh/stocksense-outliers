@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Design System UI Starter",
+  title: "Nova Precision - Authentication | Identity Portal",
   description:
-    "Next.js App Router starter with predefined design tokens, typography, cards, tables, and UI primitives.",
+    "Single sign-on and high-assurance credential authentication architecture.",
 };
 
 export default function RootLayout({
