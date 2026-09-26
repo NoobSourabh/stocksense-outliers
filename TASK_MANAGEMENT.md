@@ -66,18 +66,16 @@
 - [x] **SOUR-005 · Dashboard page** — live `/dashboard` summaries and `/operations` filters, with demo fallback on dashboard failure
   - *Remaining:* none for available backend contract; demo fallback remains for unavailable service.
   - *Test:* KPIs match backend `/dashboard`; filters update URL query state and operation list.
-- [-] **SOUR-006 · Products page** — live search/list, create/edit, and per-location availability
-  - *Remaining:* initial-stock posting; backend accepts the field but currently does not post an adjustment/ledger row.
-- [-] **SOUR-007 · Receipts page** — live list/create/detail/ready/validate/cancel workflow
-  - *Remaining:* editing draft details; backend has no operation PATCH endpoint.
-- [-] **SOUR-008 · Deliveries page** — live list/create/detail, server-calculated waiting/ready, validate/cancel, and under-covered line warning
-  - *Remaining:* editing draft details; backend has no operation PATCH endpoint.
+- [x] **SOUR-006 · Products page** — live search/list, create/edit, and per-location availability
+  - *Done:* new product form collects optional initial-stock location + quantity and sends `initialStock: { locationId, quantity }`; backend posts the adjustment/ledger row.
+- [x] **SOUR-007 · Receipts page** — live list/create/detail/ready/validate/cancel workflow
+  - *Done:* draft receipt detail page exposes Edit mode for partner, destination location, schedule date, product, and quantity; calls `PATCH /operations/{id}`.
+- [x] **SOUR-008 · Deliveries page** — live list/create/detail, server-calculated waiting/ready, validate/cancel, and under-covered line warning
+  - *Done:* draft delivery detail page exposes Edit mode for customer, source location, schedule date, product, and quantity; calls `PATCH /operations/{id}`; under-covered warning is shown on create and edit.
 - [x] **SOUR-009 · Adjustments page** — live physical count/reason flow; server calculates the delta and posts the ledger move.
-- [-] **SOUR-010 · Move history / ledger page** — live ledger rows with inbound/outbound colors, filters, and local paging
-  - *Remaining:* server pagination beyond the 50-row API limit.
-- [-] **SOUR-011 · Settings pages (P1)** — live warehouse/location directories and location detail
-  - *Remaining:* wire create forms for warehouses (`POST /warehouses`) and locations (`POST /warehouses/{id}/locations`); API client methods already exist.
-  - *Blocked on:* nothing — backend write endpoints are live.
+- [x] **SOUR-010 · Move history / ledger page** — live ledger rows with inbound/outbound colors, filters, and cursor pagination
+- [x] **SOUR-011 · Settings pages (P1)** — live warehouse/location directories and location detail, with create forms wired to `POST /warehouses` and `POST /warehouses/{id}/locations`.
+  - *Done:* mutation success/error feedback, directory query refresh, manager-permission errors, and API-aligned input validation.
 
 
 
@@ -107,7 +105,7 @@
 | 7 | **Products CRUD** — live search, create, edit, and location availability | Done | ✅ | Initial stock posting requires backend support |
 | 8 | **Wire dashboard live** — query dashboard and filtered operations; retain fallback | Done | ✅ | — |
 | 9 | **Wire products/operations/moves** — query/mutation hooks for available endpoints | Done | ✅ | Missing backend writes/pagination noted above |
-| 10 | **SOUR-011 settings forms** — add warehouse + location create UI using `stockApi.createWarehouse` / `createLocation` | 45–60 min | ✅ Yes | — |
+| 10 | **SOUR-011 settings forms** — add warehouse + location create UI using `stockApi.createWarehouse` / `createLocation` | Done | ✅ | — |
 | 11 | **SOUR-012 responsive pass** — visually inspect every route at 390px and 1440px | Open | Needs visual review | — |
 | 12 | **SOUR-013 cleanup** — remove debug markers and unused scaffold placeholders | Done | ✅ | — |
 
@@ -287,7 +285,7 @@
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 · 1:58 PM*
-*Sourabh next up: **SOUR-011** — wire settings create forms (warehouses + locations).*
+*Last updated: Saturday, Sep 26, 2026 · 2:25 PM*
+*Sourabh next up: **SOUR-012** — responsive + demo click-path polish.*
 *Kunal next up: **KUN-023** — backend deployment configuration (Render/Railway).*
-*Hardik next up: **HAR-009** responsive regression (pair with SOUR-012).*
+*Hardik next up: **HAR-012** — final demo video recording.*

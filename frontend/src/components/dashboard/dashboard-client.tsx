@@ -257,30 +257,50 @@ export function DashboardClient() {
                   </div>
                   <div className="hidden overflow-x-auto md:block">
                     <table className="w-full min-w-[850px] text-left">
-                      <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled", "Status", "Responsible"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
-                      <tbody>{operations.map((operation) => (
-                        <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
-                          <td className="px-3 py-3.5 font-mono text-sm font-medium"><Link className="text-primary hover:underline" href={operationHref(operation)}>{operation.reference}</Link></td>
-                          <td className="px-3 py-3.5 text-sm">{typeLabel(operation.type)}</td>
-                          <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</td>
-                          <td className="px-3 py-3.5 text-sm text-muted-foreground">{formatDateTime(operation.scheduleDate ?? operation.schedule_date)}</td>
-                          <td className="px-3 py-3.5"><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></td>
-                          <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.createdByName ?? operation.responsibleUser ?? "—"}</td>
+                      <thead>
+                        <tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {["Reference", "Type", "Contact", "Scheduled date & time", "Status", "Responsible"].map((name) => (
+                            <th key={name} className="px-3 py-3 font-medium">{name}</th>
+                          ))}
                         </tr>
-                      ))}</tbody>
-                      </table>
+                      </thead>
+                      <tbody>
+                        {operations.map((operation) => (
+                          <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
+                            <td className="px-3 py-3.5 font-mono text-sm font-medium">
+                              <Link className="text-primary hover:underline" href={operationHref(operation)}>
+                                {operation.reference}
+                              </Link>
+                            </td>
+                            <td className="px-3 py-3.5 text-sm">{typeLabel(operation.type)}</td>
+                            <td className="px-3 py-3.5 text-sm text-muted-foreground">
+                              {operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}
+                            </td>
+                            <td className="px-3 py-3.5 text-sm text-muted-foreground">
+                              {formatDateTime(operation.scheduleDate ?? operation.schedule_date)}
+                            </td>
+                            <td className="px-3 py-3.5">
+                              <StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} />
+                            </td>
+                            <td className="px-3 py-3.5 text-sm text-muted-foreground">
+                              {operation.createdByName ?? operation.responsibleUser ?? "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </>
               )}
-                  </RoutePanel>
-                </div>
-            </>
+            </RoutePanel>
+          </div>
+        </>
       ) : null}
-          </RouteScaffold>
-          );
+    </RouteScaffold>
+  );
 }
 
-          function operationHref(operation: DashboardOperation) {
-  const path = ({receipt: "receipts", delivery: "deliveries", transfer: "transfers", adjustment: "adjustments" } as Record<string, string>)[operation.type];
-          return path ? `/operations/${path}/${operation.id}` : "/dashboard";
+function operationHref(operation: DashboardOperation) {
+  const path = ({ receipt: "receipts", delivery: "deliveries", transfer: "transfers", adjustment: "adjustments" } as Record<string, string>)[operation.type];
+  return path ? `/operations/${path}/${operation.id}` : "/dashboard";
 }

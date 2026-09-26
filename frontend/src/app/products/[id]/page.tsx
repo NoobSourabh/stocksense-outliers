@@ -10,6 +10,7 @@ import { stockApi } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { showUpdateSuccessToast, showErrorToast } from "@/lib/toast-utils";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -102,8 +103,12 @@ function ProductEditForm({
       queryClient.setQueryData(["product", id], data);
       await queryClient.invalidateQueries({ queryKey: ["products"] });
       setMessage("Product saved.");
+      showUpdateSuccessToast("Product");
     },
-    onError: (error) => setMessage(error instanceof ApiError ? error.message : "Could not save the product."),
+    onError: (error) => {
+      setMessage(error instanceof ApiError ? error.message : "Could not save the product.");
+      showErrorToast(error, "Could not save product");
+    },
   });
 
   function submit(event: FormEvent<HTMLFormElement>) {
