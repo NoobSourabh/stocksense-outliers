@@ -5,6 +5,7 @@ Thin database query functions. No business logic here — that belongs in servic
 All IDs are uuid.UUID (PostgreSQL native UUID columns).
 """
 
+import base64
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -418,14 +419,82 @@ async def next_reference(db: AsyncSession, warehouse_id: uuid.UUID, direction: s
 # Operations
 # ---------------------------------------------------------------------------
 
+def encode_cursor(dt: datetime, record_id: uuid.UUID) -> str:
+    iso = dt.isoformat()
+    raw = f"{iso}|{str(record_id)}"
+    return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("utf-8")
+
+
+def decode_cursor(cursor_str: str) -> tuple[datetime, uuid.UUID] | None:
+    try:
+        raw = base64.urlsafe_b64decode(cursor_str.encode("utf-8")).decode("utf-8")
+        dt_str, id_str = raw.split("|", 1)
+        dt = datetime.fromisoformat(dt_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt, uuid.UUID(id_str)
+    except Exception:
+        return None
+
+
+def _build_operation_filters(
+    op_type: str | None = None,
+    status: str | None = None,
+    warehouse_id: uuid.UUID | None = None,
+    search: str | None = None,
+):
+    where_clauses = []
+    joins = []
+    if op_type:
+        where_clauses.append(StockOperation.type == op_type)
+    if status:
+        where_clauses.append(StockOperation.status == status)
+    if warehouse_id:
+        src_loc = aliased(Location)
+        dst_loc = aliased(Location)
+        joins.append((src_loc, StockOperation.source_location_id == src_loc.id))
+        joins.append((dst_loc, StockOperation.destination_location_id == dst_loc.id))
+        where_clauses.append((src_loc.warehouse_id == warehouse_id) | (dst_loc.warehouse_id == warehouse_id))
+    if search:
+        pattern = f"%{search.strip()}%"
+        where_clauses.append(
+            or_(
+                StockOperation.reference.ilike(pattern),
+                StockOperation.partner.has(Partner.name.ilike(pattern)),
+            )
+        )
+    return where_clauses, joins
+
+
+async def count_operations(
+    db: AsyncSession,
+    op_type: str | None = None,
+    status: str | None = None,
+    warehouse_id: uuid.UUID | None = None,
+    search: str | None = None,
+) -> int:
+    where_clauses, joins = _build_operation_filters(op_type, status, warehouse_id, search)
+    count_stmt = select(func.count(StockOperation.id.distinct()))
+    for j_target, j_on in joins:
+        count_stmt = count_stmt.outerjoin(j_target, j_on)
+    if where_clauses:
+        count_stmt = count_stmt.where(*where_clauses)
+    result = await db.execute(count_stmt)
+    return int(result.scalar_one() or 0)
+
+
 async def list_operations(
     db: AsyncSession,
     op_type: str | None = None,
     status: str | None = None,
     warehouse_id: uuid.UUID | None = None,
     search: str | None = None,
+    cursor: str | None = None,
     limit: int = 50,
-) -> list[StockOperation]:
+) -> tuple[list[StockOperation], int, str | None]:
+    where_clauses, joins = _build_operation_filters(op_type, status, warehouse_id, search)
+    total = await count_operations(db, op_type, status, warehouse_id, search)
+
     stmt = (
         select(StockOperation)
         .options(
@@ -435,31 +504,33 @@ async def list_operations(
             joinedload(StockOperation.destination_location),
             selectinload(StockOperation.lines),
         )
-        .order_by(StockOperation.created_at.desc())
-        .limit(limit)
     )
-    if op_type:
-        stmt = stmt.where(StockOperation.type == op_type)
-    if status:
-        stmt = stmt.where(StockOperation.status == status)
-    if warehouse_id:
-        src_loc = aliased(Location)
-        dst_loc = aliased(Location)
-        stmt = (
-            stmt.outerjoin(src_loc, StockOperation.source_location_id == src_loc.id)
-            .outerjoin(dst_loc, StockOperation.destination_location_id == dst_loc.id)
-            .where((src_loc.warehouse_id == warehouse_id) | (dst_loc.warehouse_id == warehouse_id))
-        )
-    if search:
-        pattern = f"%{search}%"
-        stmt = stmt.where(
-            or_(
-                StockOperation.reference.ilike(pattern),
-                StockOperation.partner.has(Partner.name.ilike(pattern)),
+    for j_target, j_on in joins:
+        stmt = stmt.outerjoin(j_target, j_on)
+    if where_clauses:
+        stmt = stmt.where(*where_clauses)
+
+    if cursor:
+        decoded = decode_cursor(cursor)
+        if decoded:
+            c_dt, c_id = decoded
+            stmt = stmt.where(
+                or_(
+                    StockOperation.created_at < c_dt,
+                    (StockOperation.created_at == c_dt) & (StockOperation.id < c_id),
+                )
             )
-        )
+
+    stmt = stmt.order_by(StockOperation.created_at.desc(), StockOperation.id.desc()).limit(limit + 1)
     result = await db.execute(stmt)
-    return list(result.scalars().unique().all())
+    rows = list(result.scalars().unique().all())
+
+    next_cursor = None
+    if len(rows) > limit:
+        rows = rows[:limit]
+        next_cursor = encode_cursor(rows[-1].created_at, rows[-1].id)
+
+    return rows, total, next_cursor
 
 
 def _dashboard_operation_filters(
@@ -593,49 +664,36 @@ async def create_move(db: AsyncSession, move: StockMove) -> StockMove:
     return move
 
 
-async def list_moves(
-    db: AsyncSession,
+def _build_move_filters(
     product_id: str | None = None,
     location_id: str | None = None,
     op_type: str | None = None,
     search: str | None = None,
     from_date: date | None = None,
     to_date: date | None = None,
-    limit: int = 50,
-) -> list[StockMove]:
-    stmt = (
-        select(StockMove)
-        .options(
-            joinedload(StockMove.operation).joinedload(StockOperation.partner),
-            joinedload(StockMove.product),
-            joinedload(StockMove.from_location),
-            joinedload(StockMove.to_location),
-            joinedload(StockMove.actor),
-        )
-        .order_by(StockMove.occurred_at.desc())
-        .limit(limit)
-    )
+):
+    where_clauses = []
+    joins = []
     if product_id:
-        stmt = stmt.where(StockMove.product_id == uuid.UUID(product_id))
+        where_clauses.append(StockMove.product_id == uuid.UUID(product_id))
     if location_id:
         location_uuid = uuid.UUID(location_id)
-        stmt = stmt.where(
+        where_clauses.append(
             or_(StockMove.from_location_id == location_uuid, StockMove.to_location_id == location_uuid)
         )
     if op_type:
-        stmt = stmt.join(StockOperation, StockMove.operation_id == StockOperation.id).where(
-            StockOperation.type == op_type
-        )
+        joins.append((StockOperation, StockMove.operation_id == StockOperation.id))
+        where_clauses.append(StockOperation.type == op_type)
     if from_date:
-        stmt = stmt.where(StockMove.occurred_at >= datetime.combine(from_date, datetime.min.time(), tzinfo=timezone.utc))
+        where_clauses.append(StockMove.occurred_at >= datetime.combine(from_date, datetime.min.time(), tzinfo=timezone.utc))
     if to_date:
-        stmt = stmt.where(
+        where_clauses.append(
             StockMove.occurred_at
             < datetime.combine(to_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
     if search:
-        pattern = f"%{search}%"
-        stmt = stmt.where(
+        pattern = f"%{search.strip()}%"
+        where_clauses.append(
             or_(
                 StockMove.operation.has(
                     or_(
@@ -647,8 +705,102 @@ async def list_moves(
                 StockMove.product.has(Product.sku.ilike(pattern)),
             )
         )
+    return where_clauses, joins
+
+
+async def count_moves(
+    db: AsyncSession,
+    product_id: str | None = None,
+    location_id: str | None = None,
+    op_type: str | None = None,
+    search: str | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+) -> int:
+    where_clauses, joins = _build_move_filters(
+        product_id=product_id,
+        location_id=location_id,
+        op_type=op_type,
+        search=search,
+        from_date=from_date,
+        to_date=to_date,
+    )
+    count_stmt = select(func.count(StockMove.id.distinct()))
+    for j_target, j_on in joins:
+        count_stmt = count_stmt.join(j_target, j_on)
+    if where_clauses:
+        count_stmt = count_stmt.where(*where_clauses)
+    result = await db.execute(count_stmt)
+    return int(result.scalar_one() or 0)
+
+
+async def list_moves(
+    db: AsyncSession,
+    product_id: str | None = None,
+    location_id: str | None = None,
+    op_type: str | None = None,
+    search: str | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    cursor: str | None = None,
+    limit: int = 50,
+) -> tuple[list[StockMove], int, str | None]:
+    where_clauses, joins = _build_move_filters(
+        product_id=product_id,
+        location_id=location_id,
+        op_type=op_type,
+        search=search,
+        from_date=from_date,
+        to_date=to_date,
+    )
+    total = await count_moves(
+        db,
+        product_id=product_id,
+        location_id=location_id,
+        op_type=op_type,
+        search=search,
+        from_date=from_date,
+        to_date=to_date,
+    )
+
+    stmt = (
+        select(StockMove)
+        .options(
+            joinedload(StockMove.operation).joinedload(StockOperation.partner),
+            joinedload(StockMove.product),
+            joinedload(StockMove.from_location),
+            joinedload(StockMove.to_location),
+            joinedload(StockMove.actor),
+        )
+    )
+    for j_target, j_on in joins:
+        stmt = stmt.join(j_target, j_on)
+    if where_clauses:
+        stmt = stmt.where(*where_clauses)
+
+    if cursor:
+        decoded = decode_cursor(cursor)
+        if decoded:
+            c_dt, c_id = decoded
+            if c_dt.tzinfo is None:
+                c_dt = c_dt.replace(tzinfo=timezone.utc)
+            stmt = stmt.where(
+                or_(
+                    StockMove.occurred_at < c_dt,
+                    (StockMove.occurred_at == c_dt) & (StockMove.id < c_id),
+                )
+            )
+
+    stmt = stmt.order_by(StockMove.occurred_at.desc(), StockMove.id.desc()).limit(limit + 1)
     result = await db.execute(stmt)
-    return list(result.scalars().unique().all())
+    rows = list(result.scalars().unique().all())
+
+    next_cursor = None
+    if len(rows) > limit:
+        rows = rows[:limit]
+        next_cursor = encode_cursor(rows[-1].occurred_at, rows[-1].id)
+
+    return rows, total, next_cursor
 
 
 # ---------------------------------------------------------------------------

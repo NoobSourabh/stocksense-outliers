@@ -18,8 +18,8 @@
 - **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
 - **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` serves an inventory availability view.
 - **API client connected**: `lib/api.ts` defaults to `http://localhost:8000` in dev, routes through `/api/v1`, forwards the auth cookie, and calls available FastAPI endpoints.
-- **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state.
-- **Backend contract gaps remaining**: `PATCH /operations/{id}` not implemented; product `initialStock` accepted but not posted to ledger; list APIs cap at 50 rows without cursor pagination; settings POST endpoints exist but frontend forms are not wired.
+- **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state; `PATCH /operations/{id}` allows draft modifications.
+- **Backend contract complete for P0**: `PATCH /operations/{id}` implemented; product `initialStock` creates automatic adjustment and ledger moves; cursor pagination with accurate `total` and `nextCursor` implemented on `/operations`, `/moves`, and `/products`.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -151,40 +151,18 @@
 - [x] **KUN-018 · Stock validation service** — atomic receipt/delivery/transfer/adjustment posting, no negative stock, idempotent validate
   - *Test:* Verified in `tests/test_products_and_operations_api.py`.
 
+- [x] **KUN-019 · Ledger / moves endpoint** — `GET /moves` immutable audit ledger with cursor pagination and accurate total counts
+  - *Test:* `tests/test_pagination_api.py` verifies items, total, and nextCursor.
+- [x] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` live with summaries, low stock, and recent operations
+  - *Test:* KPIs match underlying lists; verified in dashboard service tests.
+- [x] **KUN-024 · Dashboard filter, aggregate and pagination support** — cursor pagination and accurate total counts for `/operations`, `/moves`, and `/products`
+  - *Test:* `tests/test_pagination_api.py` verifies cursor encoding/decoding and multi-page traversals across operations, moves, and products.
+
 ### In Progress 🔄
 
-- [-] **KUN-019 · Ledger / moves endpoint** & **KUN-020 · Dashboard aggregation endpoint**
-- [-] **KUN-014 · Products CRUD** — live catalog + availability; `initialStock` field accepted but not posted to ledger/adjustment yet
-- [-] **KUN-016 · Operations CRUD + state machine** — create/read/ready/validate/cancel live; `PATCH /operations/{id}` still missing
-- [-] **KUN-024 · Dashboard filter and pagination support** — dashboard + filters live; list APIs still capped at 50 rows without cursor pagination
+- [-] **KUN-023 · Deploy backend** — prepare production deployment config / env vars
 
 ### Todo 📋
-
-
-#### Products + balances
-
-- [ ] **KUN-014 · Products CRUD** — finish `initialStock` posting (adjustment + ledger row on create)
-  - *Test:* Optional initial stock creates adjustment + ledger row.
-- [ ] **KUN-015 · StockBalance model + free-to-use calculation** — verify free-to-use matches waiting/ready deliveries in integration tests
-  - *Test:* Free-to-use = on_hand − reserved by waiting/ready deliveries for same product/location.
-
-#### Operations + ledger
-
-- [ ] **KUN-019 · Ledger / moves endpoint** — `GET /moves` immutable list
-  - *Test:* Every validated operation creates one `StockMove` row per line; no update/delete endpoint exists.
-- [ ] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` with receipt/delivery summaries, low stock, recent operations
-  - *Test:* KPIs match underlying lists; isLate computed correctly.
-
-
-- [ ] **KUN-016 · Operations CRUD + state machine** — add `PATCH /operations/{id}` for draft edits
-  - *Test:* Draft receipt/delivery/adjustment lines can be edited before ready.
-- [x] **KUN-017 · Reference generator** — `WH/IN/0001`, `WH/OUT/0001`, `WH/INT/0001`, `WH/ADJ/0001` per warehouse+direction sequence
-- [x] **KUN-018 · Stock validation service** — atomic receipt/delivery/transfer/adjustment posting implemented in `stock_service`
-- [x] **KUN-019 · Ledger / moves endpoint** — `GET /moves` immutable list live
-- [x] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` live with summaries and recent operations
-- [ ] **KUN-024 · Dashboard filter and aggregate support** — add cursor pagination to `/operations` and `/moves`; accurate totals beyond 50-row cap
-  - *Owner:* Kunal
-  - *Test:* Filters scope recent operations and summary metrics consistently; counts match database queries with more than 50 operations.
 
 #### Seed + deploy
 
@@ -306,13 +284,11 @@
 
 ## Active Blockers
 
-1. **Operation draft editing (SOUR-007/008)**: Backend lacks `PATCH /operations/{id}` — Kunal owns KUN-016 remainder.
-2. **Product initial stock (SOUR-006)**: Frontend sends `initialStock` but backend does not post ledger row — Kunal owns KUN-014 remainder.
-3. **Ledger pagination (SOUR-010)**: `/moves` capped at 50 rows — Kunal owns KUN-024 remainder.
+*None! All backend blockers for P0 operations, initial stock posting, and cursor-based pagination are resolved and verified.*
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 · 1:31 PM*
+*Last updated: Saturday, Sep 26, 2026 · 1:58 PM*
 *Sourabh next up: **SOUR-011** — wire settings create forms (warehouses + locations).*
-*Kunal next up: **KUN-016 PATCH** + **KUN-014 initialStock** + **KUN-023 deploy**.*
+*Kunal next up: **KUN-023** — backend deployment configuration (Render/Railway).*
 *Hardik next up: **HAR-009** responsive regression (pair with SOUR-012).*
