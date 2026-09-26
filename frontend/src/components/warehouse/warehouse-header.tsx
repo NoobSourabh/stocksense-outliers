@@ -154,16 +154,14 @@ function ProfileMenu({ onLogout }: { onLogout: () => void }) {
   return (
     <details ref={detailsRef} className="group relative hidden sm:block">
       <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-lg border border-transparent px-2 py-1 transition-all duration-150 hover:border-border/60 hover:bg-muted/70 active:scale-[0.99] select-none marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-sans font-semibold text-xs text-primary ring-1 ring-border/80 shadow-xs transition-transform group-hover:scale-105">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-[11px] tracking-wide text-primary ring-1 ring-primary/20 shadow-xs transition-transform group-hover:scale-105">
           {initials}
-          <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-emerald-500 ring-2 ring-card" aria-hidden="true" />
         </div>
-        <div className="hidden text-left lg:flex lg:flex-col lg:justify-center">
+        <div className="hidden text-left lg:flex lg:flex-col lg:justify-center gap-0.5">
           <span className="max-w-[130px] truncate text-[13px] font-semibold leading-tight text-foreground transition-colors group-hover:text-primary">
             {user?.name ?? "StockSense user"}
           </span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium capitalize text-muted-foreground leading-none">
-            <span className="size-1.5 rounded-full bg-primary/70" />
+          <span className="text-[11px] font-medium capitalize text-muted-foreground leading-none">
             {roleLabel}
           </span>
         </div>
@@ -172,9 +170,8 @@ function ProfileMenu({ onLogout }: { onLogout: () => void }) {
 
       <div className="absolute right-0 top-full z-40 mt-1.5 w-60 rounded-xl border border-border/80 bg-popover p-1.5 text-popover-foreground shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-2.5 rounded-lg bg-muted/50 p-2.5 mb-1 border border-border/40">
-          <div className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-xs text-primary ring-1 ring-border/60 shadow-xs">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-xs text-primary ring-1 ring-primary/20 shadow-xs">
             {initials}
-            <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-emerald-500 ring-2 ring-card" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-xs font-semibold text-foreground leading-snug">
@@ -185,9 +182,8 @@ function ProfileMenu({ onLogout }: { onLogout: () => void }) {
                 {user.email}
               </span>
             )}
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium capitalize text-primary leading-none">
-                <span className="size-1 rounded-full bg-primary" />
+            <div className="mt-1.5 flex items-center">
+              <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium capitalize text-primary leading-none">
                 {roleLabel}
               </span>
             </div>
@@ -262,9 +258,8 @@ function MobileNavMenu({ onLogout }: { onLogout: () => void }) {
         }}
       >
         <div className="flex items-center gap-2.5 rounded-lg bg-muted/50 p-2.5 mb-2 border border-border/40">
-          <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-xs text-primary ring-1 ring-border/60">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-xs text-primary ring-1 ring-primary/20">
             {initials}
-            <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-emerald-500 ring-2 ring-card" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-xs font-semibold text-foreground">
