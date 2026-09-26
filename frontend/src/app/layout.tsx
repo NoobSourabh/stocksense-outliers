@@ -18,8 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StockSense | Warehouse Location Details",
-  description: "Warehouse location, storage-bin hierarchy, and facility status management.",
+  title: "StockSense | Nova Precision Warehouse Ops",
+  description:
+    "Realtime physical stock inventory, direct cycle-count editing, and warehouse facility management.",
 };
 
 export default function RootLayout({
@@ -33,6 +34,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full font-sans">
         <ThemeProvider>
           <AppProviders>{children}</AppProviders>
