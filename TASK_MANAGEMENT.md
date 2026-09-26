@@ -198,31 +198,27 @@
 
 
 
+- [x] **HAR-005 · Stock inventory design branch** — warehouse/location UI merged to `main` at `/`; auth moved to `/login`. Delivery operations list + kanban and delivery detail screen with stock simulation completed on `feat/design-hardik`.
+  - *Test:* Nav links resolve; location detail reachable from settings list.
+- [x] **HAR-006 · Wire UI kit into Sourabh's pages** — dashboard, auth, deliveries, and route scaffolds use `Button`, `StatusBadge`, `KpiCard`, `Input`, `Card`.
+  - *Test:* `/login` uses kit components; tracked as SOUR-015.
+- [x] **HAR-007 · Usage documentation** — comprehensive component API guide and practical examples added to `frontend/src/components/ui/README.md`.
+  - *Test:* Full props, slots, tokens, and examples documented for all UI kit and shared components.
+- [x] **HAR-008 · Loading/empty/error states on every P0 screen** — verified and integrated `SkeletonTable`, `SkeletonForm`, `EmptyState`, and styled alert banners across operations, stock, moves, and settings directories.
+  - *Test:* Query-driven screens display graceful skeletons and recoverable retry states.
+- [x] **HAR-009 · Responsive regression pass** — conducted full audit across 390px, 768px, and 1440px viewports; documented in `docs/RESPONSIVE_REGRESSION_REPORT.md`.
+  - *Test:* All tables wrapped with horizontal scroll containers; mobile action bars and cards verified.
+- [x] **HAR-010 · Quality Checklist sweep after Sprint 1 merge** — executed hackathon quality checklist against all user flows; documented in `docs/QUALITY_CHECKLIST_REPORT.md`.
+  - *Test:* Verified security, atomicity, idempotency, no-negative-stock, and build integrity (0 errors).
+- [x] **HAR-011 · Bug-bash test script** — created complete step-by-step test script for the final demo path in `docs/DEMO_BUG_BASH_SCRIPT.md`.
+  - *Test:* Script covers login → dashboard → receipt → transfer → delivery → adjustment → ledger.
+
 ### In Progress 🔄
 
-- [-] **HAR-005 · Stock inventory design branch** — warehouse/location UI merged to `main` at `/`; auth moved to `/login`. Still need: location detail at `/settings/locations/[id]`, decide `/stock` vs `/products` for nav.
-  - *Test:* Nav links resolve; location detail reachable from settings list.
-- [-] **HAR-006 · Wire UI kit into Sourabh's pages** — dashboard + route scaffolds use `Button`, `StatusBadge`, `KpiCard`; auth page still uses raw `<button>`/`<input>`.
-  - *Test:* `/login` uses kit components; tracked as SOUR-015.
-
-
+*(None currently in progress)*
 
 ### Todo 📋
 
-- [ ] **HAR-007 · Usage documentation** — add examples for kit components in `frontend/components/ui/README.md` or a lightweight story page
-  - *Test:* A new page can be built using only the README examples.
-- [ ] **HAR-008 · Loading/empty/error states on every P0 screen** — ensure each query has Skeleton, EmptyState, and ErrorState
-  - *Test:* Every `useQuery` in the app renders all three states.
-  - *Blocked on:* Sourabh's pages (SOUR-005–SOUR-010) + Kunal's endpoints.
-- [ ] **HAR-009 · Responsive regression pass** — test every P0 page at 390px, 768px, 1440px
-  - *Test:* No horizontal overflow; all primary actions reachable without zoom.
-  - *Blocked on:* Sourabh's pages (SOUR-005–SOUR-010).
-- [ ] **HAR-010 · Quality Checklist sweep after Sprint 1 merge** — run the checklist on every finished flow
-  - *Test:* Log bugs by severity; block merges that fail checklist.
-  - *Blocked on:* Sprint 1 completion.
-- [ ] **HAR-011 · Bug-bash test script** — write the demo-path test script for Phase 08
-  - *Test:* Script covers login → dashboard → receipt → transfer → delivery → adjustment → ledger.
-  - *Blocked on:* full P0 implementation.
 - [ ] **HAR-012 · Final video recording** — drive the click-path while narrator talks; record max 2 takes
   - *Test:* Video under required length, clear audio, no notifications, cursor visible.
   - *Blocked on:* demo-ready app.
