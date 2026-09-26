@@ -38,8 +38,8 @@ export default function WarehousesPage() {
     <form onSubmit={submit}>
       <RoutePanel title="Create warehouse" description="Add a warehouse to the inventory directory.">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="grid gap-1.5 text-sm font-medium">Short code<Input value={code} onChange={(event) => setCode(event.target.value)} required maxLength={32} className="h-10 bg-background text-sm font-normal" /></label>
-          <label className="grid gap-1.5 text-sm font-medium">Warehouse name<Input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} className="h-10 bg-background text-sm font-normal" /></label>
+          <label className="grid gap-1.5 text-sm font-medium">Short code<Input value={code} onChange={(event) => setCode(event.target.value)} required maxLength={50} pattern=".*\\S.*" title="Enter a code with at least one non-space character." className="h-10 bg-background text-sm font-normal" /></label>
+          <label className="grid gap-1.5 text-sm font-medium">Warehouse name<Input value={name} onChange={(event) => setName(event.target.value)} required maxLength={255} pattern=".*\\S.*" title="Enter a name with at least one non-space character." className="h-10 bg-background text-sm font-normal" /></label>
           <label className="grid gap-1.5 text-sm font-medium">Address <span className="font-normal text-muted-foreground">Optional</span><Input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={500} className="h-10 bg-background text-sm font-normal" /></label>
         </div>
         <div className="mt-5 flex justify-end"><Button type="submit" disabled={create.isPending}>{create.isPending ? "Creating…" : "Create warehouse"}</Button></div>

@@ -19,7 +19,7 @@
 - **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` serves an inventory availability view.
 - **API client connected**: `lib/api.ts` defaults to `http://localhost:8000` in dev, routes through `/api/v1`, forwards the auth cookie, and calls available FastAPI endpoints.
 - **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state.
-- **Backend contract gaps remaining**: `PATCH /operations/{id}` not implemented; product `initialStock` accepted but not posted to ledger; list APIs cap at 50 rows without cursor pagination; settings POST endpoints exist but frontend forms are not wired.
+- **Backend contract gaps remaining**: `PATCH /operations/{id}` not implemented; product `initialStock` accepted but not posted to ledger; list APIs cap at 50 rows without cursor pagination. Frontend settings create forms are wired to the available POST endpoints.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -75,9 +75,8 @@
 - [x] **SOUR-009 · Adjustments page** — live physical count/reason flow; server calculates the delta and posts the ledger move.
 - [-] **SOUR-010 · Move history / ledger page** — live ledger rows with inbound/outbound colors, filters, and local paging
   - *Remaining:* server pagination beyond the 50-row API limit.
-- [-] **SOUR-011 · Settings pages (P1)** — live warehouse/location directories and location detail
-  - *Remaining:* wire create forms for warehouses (`POST /warehouses`) and locations (`POST /warehouses/{id}/locations`); API client methods already exist.
-  - *Blocked on:* nothing — backend write endpoints are live.
+- [x] **SOUR-011 · Settings pages (P1)** — live warehouse/location directories and location detail, with create forms wired to `POST /warehouses` and `POST /warehouses/{id}/locations`.
+  - *Done:* mutation success/error feedback, directory query refresh, manager-permission errors, and API-aligned input validation.
 
 
 
@@ -107,7 +106,7 @@
 | 7 | **Products CRUD** — live search, create, edit, and location availability | Done | ✅ | Initial stock posting requires backend support |
 | 8 | **Wire dashboard live** — query dashboard and filtered operations; retain fallback | Done | ✅ | — |
 | 9 | **Wire products/operations/moves** — query/mutation hooks for available endpoints | Done | ✅ | Missing backend writes/pagination noted above |
-| 10 | **SOUR-011 settings forms** — add warehouse + location create UI using `stockApi.createWarehouse` / `createLocation` | 45–60 min | ✅ Yes | — |
+| 10 | **SOUR-011 settings forms** — add warehouse + location create UI using `stockApi.createWarehouse` / `createLocation` | Done | ✅ | — |
 | 11 | **SOUR-012 responsive pass** — visually inspect every route at 390px and 1440px | Open | Needs visual review | — |
 | 12 | **SOUR-013 cleanup** — remove debug markers and unused scaffold placeholders | Done | ✅ | — |
 
