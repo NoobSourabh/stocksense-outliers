@@ -1,29 +1,36 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Check, Eye, EyeOff, Fingerprint, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { ApiError } from "@/lib/api";
+import { stockApi } from "@/lib/stock-api";
 
 type AuthMode = "signin" | "signup";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [showPassword, setShowPassword] = useState(false);
-  const [signUpPassword, setSignUpPassword] = useState("");
+  const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const isSignup = mode === "signup";
   const passwordRequirements = [
-    { label: "At least 8 characters", met: signUpPassword.length >= 8 },
-    { label: "One uppercase letter", met: /[A-Z]/.test(signUpPassword) },
-    { label: "One lowercase letter", met: /[a-z]/.test(signUpPassword) },
-    { label: "One symbol", met: /[!@#$%^&*(),.?":{}|<>]/.test(signUpPassword) },
+    { label: "At least 8 characters", met: password.length >= 8 },
+    { label: "One uppercase letter", met: /[A-Z]/.test(password) },
+    { label: "One lowercase letter", met: /[a-z]/.test(password) },
+    { label: "One symbol", met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
   ];
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const password = String(values.get("password") ?? "");
@@ -36,10 +43,26 @@ export default function LoginPage() {
         setNotice("Those passwords don’t match. Please check and try again.");
         return;
       }
-      setNotice("Your account details are ready.");
+    }
+    const loginId = String(values.get("loginId") ?? "").trim();
+    if (isSignup && !/^[a-zA-Z0-9_]{6,12}$/.test(loginId)) {
+      setNotice("Login ID must be 6–12 characters using letters, numbers, or underscores.");
       return;
     }
-    setNotice("Your sign-in details are ready.");
+    setIsSubmitting(true);
+    setNotice("");
+    try {
+      const result = isSignup
+        ? await stockApi.signup({ loginId, name: loginId, email: String(values.get("email") ?? "").trim(), password, confirmPassword: String(values.get("confirmPassword") ?? "") })
+        : await stockApi.login(loginId, password);
+      queryClient.setQueryData(["auth", "me"], result);
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (error) {
+      setNotice(error instanceof ApiError ? error.message : "Unable to connect to StockSense. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -66,7 +89,7 @@ export default function LoginPage() {
                 type="button"
                 variant={mode === tab ? "secondary" : "ghost"}
                 aria-pressed={mode === tab}
-                onClick={() => { setMode(tab); setNotice(""); }}
+                onClick={() => { setMode(tab); setNotice(""); setPassword(""); }}
                 className={`h-9 rounded-md px-3 text-sm font-medium ${mode === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
               >
                 {tab === "signin" ? "Sign in" : "Create account"}
@@ -113,7 +136,7 @@ export default function LoginPage() {
               </div>
               <div className="relative">
                 <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                <Input id="password" name="password" type={showPassword ? "text" : "password"} required minLength={isSignup ? 8 : undefined} autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Enter your password"} value={isSignup ? signUpPassword : undefined} onChange={isSignup ? (event) => { setSignUpPassword(event.target.value); setNotice(""); } : undefined} className="h-11 rounded-lg bg-background pl-10 pr-11 text-sm" />
+                <Input id="password" name="password" type={showPassword ? "text" : "password"} required minLength={isSignup ? 8 : undefined} autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Enter your password"} value={password} onChange={(event) => { setPassword(event.target.value); setNotice(""); }} className="h-11 rounded-lg bg-background pl-10 pr-11 text-sm" />
                 <Button type="button" variant="ghost" size="icon" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground">
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </Button>
@@ -141,7 +164,7 @@ export default function LoginPage() {
 
             {notice && <p role="status" className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground">{notice}</p>}
 
-            <Button type="submit" className="h-11 w-full gap-2 rounded-lg px-4 text-sm font-semibold">{isSignup ? "Create account" : "Sign in"}<ArrowRight className="size-4" aria-hidden="true" /></Button>
+            <Button type="submit" disabled={isSubmitting} className="h-11 w-full gap-2 rounded-lg px-4 text-sm font-semibold">{isSubmitting ? "Connecting…" : isSignup ? "Create account" : "Sign in"}<ArrowRight className="size-4" aria-hidden="true" /></Button>
           </form>
 
           <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">Your account is protected with secure sign-in.</p>

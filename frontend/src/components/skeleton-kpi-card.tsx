@@ -4,7 +4,7 @@
  * Matches the structure of the KpiCard component.
  */
 import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton, SkeletonCircle, SkeletonText } from "@/components/ui/skeleton"
+import { SkeletonCircle, SkeletonText } from "@/components/ui/skeleton"
 
 export function SkeletonKpiCard() {
   return (

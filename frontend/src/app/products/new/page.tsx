@@ -1,11 +1,50 @@
-import { RoutePanel, RouteScaffold, ScaffoldForm } from "@/components/warehouse/route-scaffold";
+"use client";
+
+import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Save } from "lucide-react";
+import { ApiError } from "@/lib/api";
+import { stockApi } from "@/lib/stock-api";
+import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function NewProductPage() {
-  return (
-    <RouteScaffold section="Products" title="New product" description="Create a catalog item with its SKU, unit, category, cost, and reorder point.">
-      <RoutePanel title="Product details" description="Product data and stock settings will be managed here.">
-        <ScaffoldForm fields={["Product name", "SKU", "Category", "Unit of measure", "Cost per unit", "Reorder point"]} />
-      </RoutePanel>
-    </RouteScaffold>
-  );
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const categories = useQuery({ queryKey: ["categories"], queryFn: stockApi.categories });
+  const [name, setName] = useState("");
+  const [sku, setSku] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [unit, setUnit] = useState("");
+  const [unitCost, setUnitCost] = useState("0");
+  const [reorderPoint, setReorderPoint] = useState("0");
+  const [message, setMessage] = useState("");
+  const create = useMutation({
+    mutationFn: () => stockApi.createProduct({ name: name.trim(), sku: sku.trim(), categoryId, unit: unit.trim(), unitCost, reorderPoint }),
+    onSuccess: async (product) => { await queryClient.invalidateQueries({ queryKey: ["products"] }); router.replace(`/products/${product.id}`); },
+    onError: (error) => setMessage(error instanceof ApiError ? error.message : "Could not create the product."),
+  });
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); create.mutate(); }
+  return <RouteScaffold section="Products" title="New product" description="Create a product record for the inventory catalog.">
+    <div className="mb-4"><Link href="/products" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to products</Link></div>
+    <form onSubmit={submit}><RoutePanel title="Product details" description="SKU values are normalized and checked by the server.">
+      {categories.isPending ? <p role="status" className="py-6 text-sm text-muted-foreground">Loading categories…</p> : categories.isError ? <p className="py-6 text-sm text-destructive">Couldn’t load categories. Refresh and try again.</p> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Field label="Product name" value={name} onChange={setName} required />
+        <Field label="SKU" value={sku} onChange={setSku} required />
+        <label className="grid gap-1.5 text-sm font-medium">Category<select required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal"><option value="">Select category</option>{categories.data.items.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+        <Field label="Unit of measure" value={unit} onChange={setUnit} placeholder="e.g. units, kg" required />
+        <Field label="Cost per unit" value={unitCost} onChange={setUnitCost} type="number" min="0" step="0.01" required />
+        <Field label={`Reorder point${unit ? ` (${unit})` : ""}`} value={reorderPoint} onChange={setReorderPoint} type="number" min="0" step="0.001" required />
+      </div>}
+      {message && <p role="alert" className="mt-4 text-sm text-destructive">{message}</p>}
+      <div className="mt-5 flex justify-end"><Button type="submit" disabled={create.isPending || categories.isPending || categories.isError || !categoryId}><Save /> {create.isPending ? "Creating…" : "Create product"}</Button></div>
+    </RoutePanel></form>
+  </RouteScaffold>;
+}
+
+function Field({ label, value, onChange, type = "text", placeholder, min, step, required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; min?: string; step?: string; required?: boolean }) {
+  return <label className="grid gap-1.5 text-sm font-medium">{label}<Input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} min={min} step={step} required={required} className="h-10 bg-background text-sm font-normal" /></label>;
 }

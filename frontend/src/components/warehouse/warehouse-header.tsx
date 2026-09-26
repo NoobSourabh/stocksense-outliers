@@ -12,6 +12,10 @@ import {
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
+import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { stockApi } from "@/lib/stock-api";
 import { Button } from "@/components/ui/button";
 
 interface WarehouseHeaderProps {
@@ -44,7 +48,7 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
   return (
     <>
       {navigation.map((item) =>
-        "items" in item ? (
+        "items" in item && item.items ? (
           <details key={item.label} className={mobile ? "group" : "group relative"}>
             <summary
               className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors marker:hidden [&::-webkit-details-marker]:hidden ${
@@ -62,74 +66,81 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
               }`}
             >
               {item.items?.map((child) => (
-                <a
+                <Link
                   key={child.href}
                   href={child.href}
                   className="block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   {child.label}
-                </a>
+                </Link>
               ))}
             </div>
           </details>
         ) : (
-          <a
+          <Link
             key={item.label}
             href={item.href}
             className="flex items-center rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             {item.label}
-          </a>
+          </Link>
         ),
       )}
     </>
   );
 }
 
-function ProfileMenu() {
+function ProfileMenu({ onLogout }: { onLogout: () => void }) {
+  const session = useQuery({ queryKey: ["auth", "me"], queryFn: stockApi.me, retry: false });
+  const user = session.data?.user;
   return (
     <details className="group relative hidden sm:block">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md p-1 transition-colors hover:bg-muted marker:hidden [&::-webkit-details-marker]:hidden">
         <span className="grid size-7 place-items-center rounded-full bg-secondary font-mono text-[11px] font-semibold">
-          AM
+          {(user?.name ?? "User").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
         </span>
         <span className="hidden text-left lg:block">
-          <span className="block text-xs font-medium leading-none">Alex M.</span>
-          <span className="mt-1 block font-mono text-[10px] text-muted-foreground">Lead</span>
+          <span className="block text-xs font-medium leading-none">{user?.name ?? "StockSense user"}</span>
+          <span className="mt-1 block font-mono text-[10px] text-muted-foreground">{user?.role ?? "—"}</span>
         </span>
         <ChevronDown className="size-3.5 text-muted-foreground" />
       </summary>
       <div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-m3-2">
-        <a
+        <Link
           href="/profile"
           className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
           <UserRound className="size-4" /> My Profile
-        </a>
-        <a
-          href="/login"
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
+        </Link>
+        <button type="button" onClick={onLogout} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
           <LogOut className="size-4" /> Logout
-        </a>
+        </button>
       </div>
     </details>
   );
 }
 
 export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  async function logout() {
+    try { await stockApi.logout(); } catch { /* Still return to login if the API is unavailable. */ }
+    queryClient.clear();
+    router.replace("/login");
+    router.refresh();
+  }
   return (
     <>
       <header className="border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1520px] items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3 lg:gap-5">
-            <a
+            <Link
               href="/dashboard"
               className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"
               aria-label="StockSense home"
             >
               <Boxes className="size-4" />
-            </a>
+            </Link>
             <div className="hidden items-center gap-2 sm:flex">
               <span className="whitespace-nowrap text-lg font-semibold tracking-tight">StockSense</span>
               <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
@@ -162,7 +173,7 @@ export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
               <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />
             </button>
             <div className="hidden h-5 w-px bg-border sm:block" />
-            <ProfileMenu />
+            <ProfileMenu onLogout={() => void logout()} />
             <details className="group relative xl:hidden">
               <summary className="grid size-8 cursor-pointer list-none place-items-center rounded-md transition-colors hover:bg-muted marker:hidden [&::-webkit-details-marker]:hidden" aria-label="Open navigation">
                 <Menu className="size-4" />
@@ -173,8 +184,8 @@ export function WarehouseHeader({ onSave }: WarehouseHeaderProps) {
               >
                 <NavigationItems mobile />
                 <div className="my-2 border-t border-border" />
-                <a href="/profile" className="block rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">My Profile</a>
-                <a href="/login" className="block rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">Logout</a>
+                <Link href="/profile" className="block rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">My Profile</Link>
+                <button type="button" onClick={() => void logout()} className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">Logout</button>
               </nav>
             </details>
           </div>

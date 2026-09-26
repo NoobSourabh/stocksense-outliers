@@ -43,11 +43,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    const activeTimers = timers.current;
     window.addEventListener(TOAST_EVENT, onToast);
     return () => {
       window.removeEventListener(TOAST_EVENT, onToast);
-      timers.current.forEach((timer) => window.clearTimeout(timer));
-      timers.current.clear();
+      activeTimers.forEach((timer) => window.clearTimeout(timer));
+      activeTimers.clear();
     };
   }, [dismiss]);
 

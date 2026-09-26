@@ -16,6 +16,15 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Backend API
+
+The frontend calls the FastAPI backend at `http://localhost:8000` by default in
+development. Start the backend separately as described in `../backend/README.md`.
+For staging or production, set `NEXT_PUBLIC_API_BASE_URL` to the backend origin
+(for example, `https://api.example.com`, without `/api/v1`) in the frontend's
+environment before building and deploying. The login endpoint is
+`POST /api/v1/auth/login`.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

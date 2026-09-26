@@ -19,6 +19,11 @@ const STATUS_STYLES: Record<string, string> = {
   Closed: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   Active: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   Completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  Ready: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  Waiting: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  Done: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  Canceled: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+  Inactive: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 }
 
 /** Applied when status is not found in STATUS_STYLES. */
@@ -40,13 +45,15 @@ interface StatusBadgeProps {
  * **Source of truth:** server/database status value passed as prop.
  */
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const styles = STATUS_STYLES[status] ?? FALLBACK_STYLES
+  const normalized = status ? status.trim() : "";
+  const titleCased = normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase() : "";
+  const styles = STATUS_STYLES[normalized] ?? STATUS_STYLES[titleCased] ?? FALLBACK_STYLES;
 
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles}`}
     >
-      {status}
+      {titleCased || normalized || "—"}
     </span>
-  )
+  );
 }
