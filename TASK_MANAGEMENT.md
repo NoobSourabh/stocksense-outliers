@@ -5,21 +5,21 @@
 
 ---
 
-## Current State Snapshot (as of 11:25 AM, main branch)
+## Current State Snapshot (as of 1:31 PM, main branch)
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-- **Auth page at** `/login`: Login/signup/logout use the backend's HttpOnly cookie session; `/auth/me` protects app routes.
-- **Backend core is live**: FastAPI + asyncpg + SQLAlchemy 2 + Neon PostgreSQL connected. Alembic migrations up to head, seed data present.
+- **Auth page at** `/login`: Login/signup/logout use the backend's HttpOnly cookie session; `/auth/me` protects app routes. Password field controlled-state warning fixed.
+- **Backend core is live**: FastAPI + asyncpg + SQLAlchemy 2 + PostgreSQL connected (local dev + Neon-ready). Alembic migrations up to head, seed data present. Dev server at `http://localhost:8000`.
 - **Single Source of Truth API Contract**: `docs/API_CONTRACT.md` extracted and frozen per `v2blueprint.md` Part 11.
-- **Auth & Session System verified**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with bcrypt, HttpOnly cookies (`SameSite=Lax`), and Bearer token fallback. Full test suite passing.
+- **Auth & Session System verified**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with bcrypt, HttpOnly cookies (`SameSite=Lax`), and Bearer token fallback. Auth test suite passing.
 - **Inventory pages use FastAPI**: product search/create/edit/availability, operations list/create/transitions, stock balances, ledger, profile, and warehouse/location reads.
 - **Dashboard is live**: `/dashboard` supplies summary cards and `/operations` supplies URL-filtered recent operations; demo fallback remains for service failures.
 - **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
-- **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
-- **API client connected**: `lib/api.ts` routes requests through `/api/v1`, forwards the auth cookie, and the frontend now calls the available FastAPI endpoints.
+- **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` serves an inventory availability view.
+- **API client connected**: `lib/api.ts` defaults to `http://localhost:8000` in dev, routes through `/api/v1`, forwards the auth cookie, and calls available FastAPI endpoints.
 - **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state.
-- **Backend contract gaps remaining**: operations have no PATCH endpoint; warehouse/location write endpoints are not implemented; list APIs return a maximum of 50 rows without usable cursor pagination.
+- **Backend contract gaps remaining**: `PATCH /operations/{id}` not implemented; product `initialStock` accepted but not posted to ledger; list APIs cap at 50 rows without cursor pagination; settings POST endpoints exist but frontend forms are not wired.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -76,7 +76,8 @@
 - [-] **SOUR-010 · Move history / ledger page** — live ledger rows with inbound/outbound colors, filters, and local paging
   - *Remaining:* server pagination beyond the 50-row API limit.
 - [-] **SOUR-011 · Settings pages (P1)** — live warehouse/location directories and location detail
-  - *Remaining:* create/edit forms; backend currently exposes only GET endpoints.
+  - *Remaining:* wire create forms for warehouses (`POST /warehouses`) and locations (`POST /warehouses/{id}/locations`); API client methods already exist.
+  - *Blocked on:* nothing — backend write endpoints are live.
 
 
 
@@ -106,8 +107,9 @@
 | 7 | **Products CRUD** — live search, create, edit, and location availability | Done | ✅ | Initial stock posting requires backend support |
 | 8 | **Wire dashboard live** — query dashboard and filtered operations; retain fallback | Done | ✅ | — |
 | 9 | **Wire products/operations/moves** — query/mutation hooks for available endpoints | Done | ✅ | Missing backend writes/pagination noted above |
-| 10 | **SOUR-012 responsive pass** — visually inspect every route at 390px and 1440px | Open | Needs visual review | — |
-| 11 | **SOUR-013 cleanup** — remove debug markers and unused scaffold placeholders | Done | ✅ | — |
+| 10 | **SOUR-011 settings forms** — add warehouse + location create UI using `stockApi.createWarehouse` / `createLocation` | 45–60 min | ✅ Yes | — |
+| 11 | **SOUR-012 responsive pass** — visually inspect every route at 390px and 1440px | Open | Needs visual review | — |
+| 12 | **SOUR-013 cleanup** — remove debug markers and unused scaffold placeholders | Done | ✅ | — |
 
 ---
 
@@ -152,8 +154,19 @@
 ### In Progress 🔄
 
 - [-] **KUN-019 · Ledger / moves endpoint** & **KUN-020 · Dashboard aggregation endpoint**
+- [-] **KUN-014 · Products CRUD** — live catalog + availability; `initialStock` field accepted but not posted to ledger/adjustment yet
+- [-] **KUN-016 · Operations CRUD + state machine** — create/read/ready/validate/cancel live; `PATCH /operations/{id}` still missing
+- [-] **KUN-024 · Dashboard filter and pagination support** — dashboard + filters live; list APIs still capped at 50 rows without cursor pagination
 
 ### Todo 📋
+
+
+#### Products + balances
+
+- [ ] **KUN-014 · Products CRUD** — finish `initialStock` posting (adjustment + ledger row on create)
+  - *Test:* Optional initial stock creates adjustment + ledger row.
+- [ ] **KUN-015 · StockBalance model + free-to-use calculation** — verify free-to-use matches waiting/ready deliveries in integration tests
+  - *Test:* Free-to-use = on_hand − reserved by waiting/ready deliveries for same product/location.
 
 #### Operations + ledger
 
@@ -163,13 +176,20 @@
   - *Test:* KPIs match underlying lists; isLate computed correctly.
 
 
+- [ ] **KUN-016 · Operations CRUD + state machine** — add `PATCH /operations/{id}` for draft edits
+  - *Test:* Draft receipt/delivery/adjustment lines can be edited before ready.
+- [x] **KUN-017 · Reference generator** — `WH/IN/0001`, `WH/OUT/0001`, `WH/INT/0001`, `WH/ADJ/0001` per warehouse+direction sequence
+- [x] **KUN-018 · Stock validation service** — atomic receipt/delivery/transfer/adjustment posting implemented in `stock_service`
+- [x] **KUN-019 · Ledger / moves endpoint** — `GET /moves` immutable list live
+- [x] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` live with summaries and recent operations
+- [ ] **KUN-024 · Dashboard filter and aggregate support** — add cursor pagination to `/operations` and `/moves`; accurate totals beyond 50-row cap
+  - *Owner:* Kunal
+  - *Test:* Filters scope recent operations and summary metrics consistently; counts match database queries with more than 50 operations.
 
 #### Seed + deploy
 
-- [ ] **KUN-021 · Deterministic seed script** — demo users Maya/Arjun, warehouses/locations, products with starting balances, one waiting delivery
-  - *Test:* Run seed on empty DB → expected records; reset and rerun → identical data.
-- [ ] **KUN-022 · Health endpoint** — `GET /health` returns API + DB status
-  - *Test:* Returns 200 when DB connected; useful for deploy checks.
+- [x] **KUN-021 · Deterministic seed script** — demo users Maya/Arjun, warehouses/locations, products with starting balances, waiting delivery
+- [x] **KUN-022 · Health endpoint** — `GET /health` returns API + DB status
 - [ ] **KUN-023 · Deploy backend** — Railway/Render with Postgres and env vars
   - *Test:* Public health endpoint returns 200; frontend points to deployed URL.
 
@@ -195,10 +215,8 @@
 
 ### In Progress 🔄
 
-- [-] **HAR-005 · Stock inventory design branch** — warehouse/location UI merged to `main` at `/`; auth moved to `/login`. Still need: location detail at `/settings/locations/[id]`, decide `/stock` vs `/products` for nav.
-  - *Test:* Nav links resolve; location detail reachable from settings list.
-- [-] **HAR-006 · Wire UI kit into Sourabh's pages** — dashboard + route scaffolds use `Button`, `StatusBadge`, `KpiCard`; auth page still uses raw `<button>`/`<input>`.
-  - *Test:* `/login` uses kit components; tracked as SOUR-015.
+- [x] **HAR-005 · Stock inventory design branch** — warehouse/location UI on `main`; auth at `/login`; location detail at `/settings/locations/[id]`; `/stock` nav resolved.
+- [x] **HAR-006 · Wire UI kit into Sourabh's pages** — dashboard + route scaffolds use kit; auth page uses `Button`/`Input`/`Card`/`Label` (SOUR-015 done).
 
 
 
@@ -208,10 +226,9 @@
   - *Test:* A new page can be built using only the README examples.
 - [ ] **HAR-008 · Loading/empty/error states on every P0 screen** — ensure each query has Skeleton, EmptyState, and ErrorState
   - *Test:* Every `useQuery` in the app renders all three states.
-  - *Blocked on:* Sourabh's pages (SOUR-005–SOUR-010) + Kunal's endpoints.
 - [ ] **HAR-009 · Responsive regression pass** — test every P0 page at 390px, 768px, 1440px
   - *Test:* No horizontal overflow; all primary actions reachable without zoom.
-  - *Blocked on:* Sourabh's pages (SOUR-005–SOUR-010).
+  - *Can start:* pair with Sourabh on SOUR-012 responsive pass.
 - [ ] **HAR-010 · Quality Checklist sweep after Sprint 1 merge** — run the checklist on every finished flow
   - *Test:* Log bugs by severity; block merges that fail checklist.
   - *Blocked on:* Sprint 1 completion.
@@ -241,8 +258,8 @@
 
 ### Todo 📋
 
-- [ ] **SHR-005 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
-  - *Owner:* Kunal or Sourabh
+- [x] **SHR-005 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
+  - *Owner:* Kunal
   - *Test:* Single source-of-truth contract file exists.
 - [ ] **SHR-006 · Create shared scratch doc** for Idea Document sections 1–11
   - *Owner:* Hardik
@@ -289,11 +306,13 @@
 
 ## Active Blockers
 
-1. **None for Auth / Contract**: `docs/API_CONTRACT.md` is frozen, and backend auth endpoints (`/auth/signup`, `/auth/login`, `/auth/logout`, `/auth/me`) are live with verified session cookies. Sourabh can immediately wire SOUR-004 (`/login`).
-2. **Settings & Product CRUD wiring**: Sourabh's remaining pages (SOUR-005 to SOUR-011) await completion of KUN-011–KUN-015 endpoints.
+1. **Operation draft editing (SOUR-007/008)**: Backend lacks `PATCH /operations/{id}` — Kunal owns KUN-016 remainder.
+2. **Product initial stock (SOUR-006)**: Frontend sends `initialStock` but backend does not post ledger row — Kunal owns KUN-014 remainder.
+3. **Ledger pagination (SOUR-010)**: `/moves` capped at 50 rows — Kunal owns KUN-024 remainder.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 (Backend core, API contract, and Auth verification)*
-*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies with full test suite passing).*
-*Next available work: Sourabh to wire SOUR-004 to live auth; Kunal to deliver Reference Data & Products CRUD (KUN-011–KUN-015).*
+*Last updated: Saturday, Sep 26, 2026 · 1:31 PM*
+*Sourabh next up: **SOUR-011** — wire settings create forms (warehouses + locations).*
+*Kunal next up: **KUN-016 PATCH** + **KUN-014 initialStock** + **KUN-023 deploy**.*
+*Hardik next up: **HAR-009** responsive regression (pair with SOUR-012).*

@@ -1,3 +1,3 @@
 export function WarehouseFooter() {
-  return <footer className="mt-8 border-t border-border bg-card"><div className="mx-auto flex max-w-[1520px] flex-col gap-2 px-4 py-3 font-mono text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6"><span>StockSense ERP Suite • Node ID: <b className="font-medium text-foreground">WH-ALPHA-01</b></span><div className="flex flex-wrap gap-x-4 gap-y-1"><span className="flex items-center gap-1.5"><i className="size-1.5 rounded-full bg-success" /> RF Scanners Online</span><span>Sync Latency: <b className="font-medium text-foreground">14ms</b></span><span>Active Zone: <b className="font-medium text-foreground">Rack Sector B</b></span></div></div></footer>;
+  return <footer className="mt-8 border-t border-border bg-card"><div className="mx-auto max-w-[1520px] px-4 py-3 text-xs text-muted-foreground sm:px-6">StockSense · Inventory workspace</div></footer>;
 }

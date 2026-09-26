@@ -6,10 +6,10 @@ All IDs are uuid.UUID (PostgreSQL native UUID columns).
 """
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import case, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, joinedload, selectinload
 
@@ -452,8 +452,110 @@ async def list_operations(
         )
     if search:
         pattern = f"%{search}%"
-        stmt = stmt.where(StockOperation.reference.ilike(pattern))
+        stmt = stmt.where(
+            or_(
+                StockOperation.reference.ilike(pattern),
+                StockOperation.partner.has(Partner.name.ilike(pattern)),
+            )
+        )
     result = await db.execute(stmt)
+    return list(result.scalars().unique().all())
+
+
+def _dashboard_operation_filters(
+    op_type: OperationType | None = None,
+    status: OperationStatus | None = None,
+    warehouse_id: uuid.UUID | None = None,
+    location_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
+):
+    filters = []
+    if op_type:
+        filters.append(StockOperation.type == op_type)
+    if status:
+        filters.append(StockOperation.status == status)
+    if location_id:
+        filters.append(
+            (StockOperation.source_location_id == location_id)
+            | (StockOperation.destination_location_id == location_id)
+        )
+    if warehouse_id:
+        filters.append(
+            select(Location.id)
+            .where(
+                Location.warehouse_id == warehouse_id,
+                Location.id.in_((StockOperation.source_location_id, StockOperation.destination_location_id)),
+            )
+            .exists()
+        )
+    if category_id:
+        filters.append(
+            select(OperationLine.id)
+            .join(Product, OperationLine.product_id == Product.id)
+            .where(
+                OperationLine.operation_id == StockOperation.id,
+                Product.category_id == category_id,
+            )
+            .exists()
+        )
+    return filters
+
+
+async def count_dashboard_operations(
+    db: AsyncSession,
+    op_type: OperationType | None = None,
+    status: OperationStatus | None = None,
+    warehouse_id: uuid.UUID | None = None,
+    location_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
+) -> dict[str, dict[str, int]]:
+    filters = _dashboard_operation_filters(op_type, status, warehouse_id, location_id, category_id)
+    terminal = StockOperation.status.in_([OperationStatus.DONE, OperationStatus.CANCELED])
+    result = await db.execute(
+        select(
+            StockOperation.type,
+            func.count(StockOperation.id),
+            func.sum(case((~terminal, 1), else_=0)),
+            func.sum(case((~terminal & (StockOperation.schedule_date < date.today()), 1), else_=0)),
+            func.sum(case((StockOperation.status == OperationStatus.WAITING, 1), else_=0)),
+        )
+        .where(*filters)
+        .group_by(StockOperation.type)
+    )
+    counts: dict[str, dict[str, int]] = {}
+    for row_type, total, open_count, late, waiting in result.all():
+        counts[row_type.value] = {
+            "total": int(total or 0),
+            "open": int(open_count or 0),
+            "late": int(late or 0),
+            "waiting": int(waiting or 0),
+        }
+    return counts
+
+
+async def list_dashboard_operations(
+    db: AsyncSession,
+    op_type: OperationType | None = None,
+    status: OperationStatus | None = None,
+    warehouse_id: uuid.UUID | None = None,
+    location_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
+    limit: int = 10,
+) -> list[StockOperation]:
+    filters = _dashboard_operation_filters(op_type, status, warehouse_id, location_id, category_id)
+    result = await db.execute(
+        select(StockOperation)
+        .options(
+            joinedload(StockOperation.creator),
+            joinedload(StockOperation.partner),
+            joinedload(StockOperation.source_location),
+            joinedload(StockOperation.destination_location),
+            selectinload(StockOperation.lines),
+        )
+        .where(*filters)
+        .order_by(StockOperation.created_at.desc())
+        .limit(limit)
+    )
     return list(result.scalars().unique().all())
 
 
@@ -494,14 +596,17 @@ async def create_move(db: AsyncSession, move: StockMove) -> StockMove:
 async def list_moves(
     db: AsyncSession,
     product_id: str | None = None,
+    location_id: str | None = None,
     op_type: str | None = None,
     search: str | None = None,
+    from_date: date | None = None,
+    to_date: date | None = None,
     limit: int = 50,
 ) -> list[StockMove]:
     stmt = (
         select(StockMove)
         .options(
-            joinedload(StockMove.operation),
+            joinedload(StockMove.operation).joinedload(StockOperation.partner),
             joinedload(StockMove.product),
             joinedload(StockMove.from_location),
             joinedload(StockMove.to_location),
@@ -512,15 +617,36 @@ async def list_moves(
     )
     if product_id:
         stmt = stmt.where(StockMove.product_id == uuid.UUID(product_id))
+    if location_id:
+        location_uuid = uuid.UUID(location_id)
+        stmt = stmt.where(
+            or_(StockMove.from_location_id == location_uuid, StockMove.to_location_id == location_uuid)
+        )
     if op_type:
         stmt = stmt.join(StockOperation, StockMove.operation_id == StockOperation.id).where(
             StockOperation.type == op_type
         )
+    if from_date:
+        stmt = stmt.where(StockMove.occurred_at >= datetime.combine(from_date, datetime.min.time(), tzinfo=timezone.utc))
+    if to_date:
+        stmt = stmt.where(
+            StockMove.occurred_at
+            < datetime.combine(to_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+        )
     if search:
         pattern = f"%{search}%"
-        if not op_type:
-            stmt = stmt.join(StockOperation, StockMove.operation_id == StockOperation.id)
-        stmt = stmt.where(StockOperation.reference.ilike(pattern))
+        stmt = stmt.where(
+            or_(
+                StockMove.operation.has(
+                    or_(
+                        StockOperation.reference.ilike(pattern),
+                        StockOperation.partner.has(Partner.name.ilike(pattern)),
+                    )
+                ),
+                StockMove.product.has(Product.name.ilike(pattern)),
+                StockMove.product.has(Product.sku.ilike(pattern)),
+            )
+        )
     result = await db.execute(stmt)
     return list(result.scalars().unique().all())
 
@@ -606,16 +732,33 @@ async def get_delivery_summary(db: AsyncSession) -> dict:
     return {"to_deliver": total, "late": late, "waiting": waiting, "total": total}
 
 
-async def list_low_stock_products(db: AsyncSession) -> list[dict]:
-    """Products where total on_hand <= reorder point."""
+async def count_active_dashboard_products(db: AsyncSession) -> int:
+    result = await db.execute(
+        select(func.count()).select_from(Product).where(Product.is_active == True)
+    )
+    return int(result.scalar_one())
+
+
+async def list_low_stock_products(
+    db: AsyncSession,
+    warehouse_id: uuid.UUID | None = None,
+    location_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
+) -> list[dict]:
+    """Return the complete low-stock queue at the selected stock scope."""
     balance_sub = (
         select(
             StockBalance.product_id,
             func.coalesce(func.sum(StockBalance.on_hand_quantity), 0).label("total_qty"),
         )
+        .join(Location, Location.id == StockBalance.location_id)
         .group_by(StockBalance.product_id)
-        .subquery()
     )
+    if warehouse_id:
+        balance_sub = balance_sub.where(Location.warehouse_id == warehouse_id)
+    if location_id:
+        balance_sub = balance_sub.where(StockBalance.location_id == location_id)
+    balance_sub = balance_sub.subquery()
 
     stmt = (
         select(Product, balance_sub.c.total_qty)
@@ -626,6 +769,8 @@ async def list_low_stock_products(db: AsyncSession) -> list[dict]:
         )
         .order_by(func.coalesce(balance_sub.c.total_qty, 0).asc())
     )
+    if category_id:
+        stmt = stmt.where(Product.category_id == category_id)
     result = await db.execute(stmt)
     rows = result.all()
     return [
