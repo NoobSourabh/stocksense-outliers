@@ -7,7 +7,7 @@ Supports the delivery waiting state per v2 blueprint.
 """
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +43,14 @@ _DIRECTION_MAP = {
 }
 
 
+def _normalize_schedule_datetime(val: datetime | date | None) -> datetime | None:
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val if val.tzinfo else val.replace(tzinfo=timezone.utc)
+    return datetime.combine(val, time(0, 0), tzinfo=timezone.utc)
+
+
 async def create_stock_operation(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -50,7 +58,7 @@ async def create_stock_operation(
     partner_id: str | None,
     source_location_id: str | None,
     destination_location_id: str | None,
-    schedule_date: date | None,
+    schedule_date: datetime | date | None,
     note: str | None,
     lines: list[dict],
 ) -> StockOperation:
@@ -120,7 +128,7 @@ async def create_stock_operation(
         partner_id=p_id,
         source_location_id=src_id,
         destination_location_id=dst_id,
-        schedule_date=schedule_date,
+        schedule_date=_normalize_schedule_datetime(schedule_date),
         note=note,
         created_by=user_id,
     )
@@ -366,7 +374,7 @@ async def update_operation(
     partner_id: str | None = None,
     source_location_id: str | None = None,
     destination_location_id: str | None = None,
-    schedule_date: date | None = None,
+    schedule_date: datetime | date | None = None,
     note: str | None = None,
     lines: list[dict] | None = None,
 ) -> StockOperation:
@@ -398,7 +406,7 @@ async def update_operation(
                 raise NotFoundError("Location", str(dst_id))
         op.destination_location_id = dst_id
     if schedule_date is not None:
-        op.schedule_date = schedule_date
+        op.schedule_date = _normalize_schedule_datetime(schedule_date)
     if note is not None:
         op.note = note
 

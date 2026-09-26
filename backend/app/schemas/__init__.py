@@ -259,7 +259,7 @@ class OperationCreateRequest(CamelModel):
     partner_id: str | None = Field(None, alias="partnerId")
     source_location_id: str | None = Field(None, alias="sourceLocationId")
     destination_location_id: str | None = Field(None, alias="destinationLocationId")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     note: str | None = None
     lines: list[OperationLineRequest] = Field(..., min_length=1)
 
@@ -268,7 +268,7 @@ class OperationUpdateRequest(CamelModel):
     partner_id: str | None = Field(None, alias="partnerId")
     source_location_id: str | None = Field(None, alias="sourceLocationId")
     destination_location_id: str | None = Field(None, alias="destinationLocationId")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     note: str | None = None
     lines: list[OperationLineRequest] | None = None
 
@@ -298,7 +298,7 @@ class OperationSummaryResponse(CamelModel):
     partner_name: str | None = Field(None, alias="partnerName")
     source_location_name: str | None = Field(None, alias="sourceLocationName")
     destination_location_name: str | None = Field(None, alias="destinationLocationName")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     created_by_name: str = Field(alias="createdByName")
     created_at: datetime = Field(alias="createdAt")
     line_count: int = Field(alias="lineCount")
@@ -316,7 +316,7 @@ class OperationDetailResponse(CamelModel):
     source_location_name: str | None = Field(None, alias="sourceLocationName")
     destination_location_id: str | None = Field(None, alias="destinationLocationId")
     destination_location_name: str | None = Field(None, alias="destinationLocationName")
-    schedule_date: date | None = Field(None, alias="scheduleDate")
+    schedule_date: datetime | date | None = Field(None, alias="scheduleDate")
     note: str | None = None
     created_by: str = Field(alias="createdBy")
     created_by_name: str = Field(alias="createdByName")

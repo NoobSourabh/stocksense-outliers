@@ -5,7 +5,7 @@ Aggregates receipt/delivery summaries, low-stock items, and recent operations
 per the v2 blueprint dashboard shape.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,11 +26,14 @@ from app.schemas import (
 
 
 def _is_late(op) -> bool:
-    """Schedule date < today and not done/canceled."""
+    """Schedule date < now/today and not done/canceled."""
     if op.schedule_date is None:
         return False
     if op.status in (OperationStatus.DONE, OperationStatus.CANCELED):
         return False
+    if isinstance(op.schedule_date, datetime):
+        sched = op.schedule_date if op.schedule_date.tzinfo else op.schedule_date.replace(tzinfo=timezone.utc)
+        return sched < datetime.now(timezone.utc)
     return op.schedule_date < date.today()
 
 

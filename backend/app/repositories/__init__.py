@@ -548,7 +548,7 @@ async def count_active_locations(db: AsyncSession) -> int:
 
 async def get_receipt_summary(db: AsyncSession) -> dict:
     """Receipt summary: to_receive (not done/canceled), late, total."""
-    today = date.today()
+    now = datetime.now(timezone.utc)
 
     # Total non-terminal receipts
     total_result = await db.execute(
@@ -559,12 +559,12 @@ async def get_receipt_summary(db: AsyncSession) -> dict:
     )
     total = total_result.scalar_one()
 
-    # Late: schedule_date < today and not done/canceled
+    # Late: schedule_date < now and not done/canceled
     late_result = await db.execute(
         select(func.count()).select_from(StockOperation).where(
             StockOperation.type == OperationType.RECEIPT,
             StockOperation.status.notin_([OperationStatus.DONE, OperationStatus.CANCELED]),
-            StockOperation.schedule_date < today,
+            StockOperation.schedule_date < now,
             StockOperation.schedule_date.isnot(None),
         )
     )
@@ -575,7 +575,7 @@ async def get_receipt_summary(db: AsyncSession) -> dict:
 
 async def get_delivery_summary(db: AsyncSession) -> dict:
     """Delivery summary: to_deliver, late, waiting, total."""
-    today = date.today()
+    now = datetime.now(timezone.utc)
 
     total_result = await db.execute(
         select(func.count()).select_from(StockOperation).where(
@@ -589,7 +589,7 @@ async def get_delivery_summary(db: AsyncSession) -> dict:
         select(func.count()).select_from(StockOperation).where(
             StockOperation.type == OperationType.DELIVERY,
             StockOperation.status.notin_([OperationStatus.DONE, OperationStatus.CANCELED]),
-            StockOperation.schedule_date < today,
+            StockOperation.schedule_date < now,
             StockOperation.schedule_date.isnot(None),
         )
     )

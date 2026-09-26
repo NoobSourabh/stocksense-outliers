@@ -51,11 +51,11 @@ const DEMO_DASHBOARD: DashboardResponse = {
   lowStock: { count: 4 },
   scheduledTransfers: 3,
   recentOperations: [
-    { id: "demo-1", reference: "WH/OUT/0248", type: "delivery", partnerName: "Northstar Offices", scheduleDate: "2026-09-26", status: "ready", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-FURN" },
-    { id: "demo-2", reference: "WH/IN/0247", type: "receipt", partnerName: "Apex Metals", scheduleDate: "2026-09-25", status: "waiting", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-METAL" },
-    { id: "demo-3", reference: "WH/TR/0246", type: "transfer", partnerName: "Main → Overflow", scheduleDate: "2026-09-27", status: "ready", warehouseId: "WH-01", locationId: "LOC-B2", categoryId: "CAT-FURN" },
-    { id: "demo-4", reference: "WH/OUT/0245", type: "delivery", partnerName: "Harbor Design Co.", scheduleDate: "2026-09-24", status: "done", warehouseId: "WH-02", locationId: "LOC-C3", categoryId: "CAT-FURN" },
-    { id: "demo-5", reference: "WH/ADJ/0244", type: "adjustment", partnerName: "Cycle count", scheduleDate: "2026-09-24", status: "done", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-TOOLS" },
+    { id: "demo-1", reference: "WH/OUT/0248", type: "delivery", partnerName: "Northstar Offices", scheduleDate: "2026-09-26T11:00:00Z", status: "ready", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-FURN" },
+    { id: "demo-2", reference: "WH/IN/0247", type: "receipt", partnerName: "Apex Metals", scheduleDate: "2026-09-25T14:30:00Z", status: "waiting", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-METAL" },
+    { id: "demo-3", reference: "WH/TR/0246", type: "transfer", partnerName: "Main → Overflow", scheduleDate: "2026-09-27T09:15:00Z", status: "ready", warehouseId: "WH-01", locationId: "LOC-B2", categoryId: "CAT-FURN" },
+    { id: "demo-4", reference: "WH/OUT/0245", type: "delivery", partnerName: "Harbor Design Co.", scheduleDate: "2026-09-24T16:00:00Z", status: "done", warehouseId: "WH-02", locationId: "LOC-C3", categoryId: "CAT-FURN" },
+    { id: "demo-5", reference: "WH/ADJ/0244", type: "adjustment", partnerName: "Cycle count", scheduleDate: "2026-09-24T17:45:00Z", status: "done", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-TOOLS" },
   ],
 };
 
@@ -81,10 +81,20 @@ function countOf(value: DashboardResponse["lowStock"] | DashboardResponse["sched
   return 0;
 }
 
-function formatDate(value?: string | null): string {
+function formatDateTime(value?: string | null): string {
   if (!value) return "—";
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(date);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const fallback = new Date(`${value.slice(0, 10)}T00:00:00`);
+    return Number.isNaN(fallback.getTime()) ? value : new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(fallback);
+  }
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function typeLabel(type: string): string {
@@ -213,13 +223,13 @@ export function DashboardClient() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[700px] text-left">
-                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled", "Status"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
+                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled date & time", "Status"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
                     <tbody>{operations.map((operation) => (
                       <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
                         <td className="px-3 py-3.5 font-mono text-sm font-medium">{operation.reference}</td>
                         <td className="px-3 py-3.5 text-sm">{typeLabel(operation.type)}</td>
                         <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</td>
-                        <td className="px-3 py-3.5 text-sm text-muted-foreground">{formatDate(operation.scheduleDate ?? operation.schedule_date)}</td>
+                        <td className="px-3 py-3.5 text-sm text-muted-foreground">{formatDateTime(operation.scheduleDate ?? operation.schedule_date)}</td>
                         <td className="px-3 py-3.5"><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></td>
                       </tr>
                     ))}</tbody>

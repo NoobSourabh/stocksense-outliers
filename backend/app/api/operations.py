@@ -6,7 +6,7 @@ POST /operations/{id}/ready, POST /operations/{id}/validate, POST /operations/{i
 """
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,6 +41,10 @@ def _is_late(op) -> bool:
         return False
     if op.status in (OperationStatus.DONE, OperationStatus.CANCELED):
         return False
+    now = datetime.now(timezone.utc)
+    if isinstance(op.schedule_date, datetime):
+        sched = op.schedule_date if op.schedule_date.tzinfo else op.schedule_date.replace(tzinfo=timezone.utc)
+        return sched < now
     return op.schedule_date < date.today()
 
 

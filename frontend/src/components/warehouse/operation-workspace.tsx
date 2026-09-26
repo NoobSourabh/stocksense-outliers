@@ -18,11 +18,17 @@ const settings = {
 export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mode: "new" | "detail"; id?: string }) {
   const config = settings[kind];
   const [status, setStatus] = useState(kind === "deliveries" ? "Waiting" : "Draft");
+  const [scheduleDateTime, setScheduleDateTime] = useState("2026-09-27T10:00");
   const [notice, setNotice] = useState("");
 
   function saveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice(mode === "new" ? `${config.label} draft saved locally. Connect the operations API to persist it.` : "Changes saved locally for this demo.");
+    const formatted = scheduleDateTime ? scheduleDateTime.replace("T", " ") : "unspecified";
+    setNotice(
+      mode === "new"
+        ? `${config.label} draft saved locally (scheduled: ${formatted}). Connect the operations API to persist it.`
+        : `Changes saved locally for this demo (scheduled: ${formatted}).`
+    );
   }
 
   const canReady = status === "Draft" || status === "Waiting";
@@ -30,7 +36,7 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
   const displayRef = mode === "new" ? "Assigned on save" : (id === "demo" ? config.reference : id ?? config.reference);
 
   return (
-    <RouteScaffold section={`Operations / ${config.plural}`} title={mode === "new" ? `New ${config.label.toLowerCase()}` : `${config.label} ${displayRef}`} description={mode === "new" ? `Prepare a ${config.label.toLowerCase()} and its product lines.` : `Review the operation details, schedule, and product quantities.`}>
+    <RouteScaffold section={`Operations / ${config.plural}`} title={mode === "new" ? `New ${config.label.toLowerCase()}` : `${config.label} ${displayRef}`} description={mode === "new" ? `Prepare a ${config.label.toLowerCase()} and its product lines.` : `Review the operation details, schedule date & time, and product quantities.`}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href={`/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to {config.plural.toLowerCase()}</Link>
         {mode === "detail" && <StatusBadge status={status} />}
@@ -41,7 +47,51 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
             <Field label="Reference" defaultValue={displayRef} readOnly />
             <Field label={config.source} defaultValue={kind === "receipts" ? "Apex Metals" : kind === "deliveries" ? "Rack A" : "Rack A"} />
             <Field label={config.target} defaultValue={kind === "receipts" ? "Receiving Bay" : kind === "deliveries" ? "Northstar Offices" : "Damaged during handling"} />
-            <Field label="Schedule date" type="date" defaultValue="2026-09-27" />
+            <div className="grid gap-1.5 text-sm font-medium">
+              <label htmlFor="schedule-datetime" className="text-sm font-medium">
+                Schedule date &amp; time
+              </label>
+              <input
+                id="schedule-datetime"
+                type="datetime-local"
+                value={scheduleDateTime}
+                onChange={(e) => setScheduleDateTime(e.target.value)}
+                className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <div className="flex flex-wrap gap-1.5 text-xs font-normal">
+                <button
+                  type="button"
+                  onClick={() => setScheduleDateTime(new Date().toISOString().slice(0, 16))}
+                  className="rounded border border-border px-1.5 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    d.setHours(9, 0, 0, 0);
+                    setScheduleDateTime(d.toISOString().slice(0, 16));
+                  }}
+                  className="rounded border border-border px-1.5 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  Tomorrow 09:00
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 2);
+                    d.setHours(14, 0, 0, 0);
+                    setScheduleDateTime(d.toISOString().slice(0, 16));
+                  }}
+                  className="rounded border border-border px-1.5 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  +2 Days 14:00
+                </button>
+              </div>
+            </div>
             <Field label="Responsible" defaultValue="Alex Morgan" />
           </div>
         </RoutePanel>
