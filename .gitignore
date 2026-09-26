@@ -40,3 +40,13 @@ yarn-error.log*
 # TypeScript build info & auto-generated env
 *.tsbuildinfo
 next-env.d.ts
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.db
+.venv/
+venv/
+.tmp/

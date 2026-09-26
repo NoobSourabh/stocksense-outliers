@@ -82,24 +82,14 @@
 
 - [x] **KUN-001 · Stack decision** — locked Next.js frontend + FastAPI backend + PostgreSQL database per `v2blueprint.md`
 - [x] **KUN-002 · Problem analysis** — re-read problem statement, flagged constraints and risky assumptions (Odoo-native vs standalone)
+- [x] **KUN-003 · Create `feature/kunal/backend-core` branch** — branched from `main`, active working branch
+- [x] **KUN-004 · Scaffold FastAPI project** — `backend/` folder scaffolded with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/` matching v2 blueprint
+- [x] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 + asyncpg against Neon PostgreSQL, Alembic migrations initialized and upgraded to head, seed data verified
+- [x] **KUN-006 · Create `.env.example`** — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
 
 ### In Progress 🔄
 
-_None — backend work has not started. KUN-003 should move to In Progress immediately._
-
-### Todo 📋
-
-#### Must start now (next 60 minutes)
-
-- [ ] **KUN-003 · Create `feature/kunal/backend-core` branch**
-  - *Test:* Branch pushed to origin; PR opened from `main` later.
-- [ ] **KUN-004 · Scaffold FastAPI project** — `backend/` folder with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/`
-  - *Test:* `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload` starts without errors.
-- [ ] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 base, migrations, `DATABASE_URL` from env
-  - *Test:* `alembic upgrade head` runs against a fresh Postgres DB; `SELECT 1` from app returns 1.
-- [ ] **KUN-006 · Create `.env.example`** — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
-  - *Test:* No real secrets in repo; teammates can copy to `.env` and run locally.
-- [ ] **KUN-007 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
+- [-] **KUN-007 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
   - *Test:* File exists and covers every P0 endpoint with method, path, auth, request, response, errors.
 
 #### Auth endpoints
