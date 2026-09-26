@@ -65,23 +65,23 @@
 - [-] **SOUR-005 · Dashboard page** — UI built with KPI cards, filter bar (URL query sync), recent operations; demo fallback when API unavailable
   - *Remaining:* wire to live `/dashboard` once KUN-020 lands; remove demo banner in production path.
   - *Test:* KPIs match backend `/dashboard`; filters update URL query state and operation list.
-- [-] **SOUR-006 · Products page** — list + new + detail scaffold pages with mock `ScaffoldTable` / `ScaffoldForm`
-  - *Remaining:* search/filter, real CRUD, per-location On Hand / Free-to-Use from API.
+- [-] **SOUR-006 · Products page** — list + new + detail scaffold pages with local product search
+  - *Remaining:* real CRUD, per-location On Hand / Free-to-Use from API.
   - *Blocked on:* Kunal's `/products` CRUD endpoints (KUN-014–KUN-015).
-- [-] **SOUR-007 · Receipts page** — list scaffold with mock receipt rows
-  - *Remaining:* create/detail views, "Mark as Ready", validate flow.
+- [-] **SOUR-007 · Receipts page** — list, create, and detail screens with demo-local ready/validate/cancel flow
+  - *Remaining:* connect operation screens to API and post stock changes.
   - *Blocked on:* Kunal's `/operations` receipt endpoints (KUN-016–KUN-018).
-- [-] **SOUR-008 · Deliveries page** — list scaffold with mock delivery rows
-  - *Remaining:* create/detail, "Pick/Pack → Ready", validate flow, red-flag under-covered lines.
+- [-] **SOUR-008 · Deliveries page** — list, create, and detail screens with under-covered line warning and demo-local actions
+  - *Remaining:* connect operation screens to API and post stock changes.
   - *Blocked on:* Kunal's delivery endpoints + free-to-use calculation (KUN-015–KUN-018).
-- [-] **SOUR-009 · Adjustments page** — list scaffold with mock adjustment rows
-  - *Remaining:* physical count form with reason, calculated delta, validate flow.
+- [-] **SOUR-009 · Adjustments page** — list, create, and detail screens with physical count/reason inputs and demo-local actions
+  - *Remaining:* connect operation screens to API and calculate/post adjustment deltas.
   - *Blocked on:* Kunal's adjustment endpoints (KUN-016–KUN-018).
 - [-] **SOUR-010 · Move history / ledger page** — list scaffold with mock ledger rows
   - *Remaining:* inbound green / outbound red styling from real data; pagination.
   - *Blocked on:* Kunal's `/moves` ledger endpoint (KUN-019).
-- [-] **SOUR-011 · Settings pages (P1)** — warehouse + location list scaffolds with mock tables; location detail UI built at `/` (needs correct route)
-  - *Remaining:* CRUD forms wired to API; relocate location detail to `/settings/locations/[id]`.
+- [-] **SOUR-011 · Settings pages (P1)** — warehouse + location list scaffolds with mock tables; location detail is at `/settings/locations/[id]`
+  - *Remaining:* CRUD forms wired to API.
   - *Blocked on:* Kunal's `/warehouses` and `/locations` endpoints (KUN-012).
 
 
@@ -94,7 +94,7 @@
   - *Test:* `grep -R "TODO\|FIXME\|console.log\|lorem ipsum" frontend/src/app frontend/src/components` returns nothing demo-facing.
 - [ ] **SOUR-014 · Auth guard + redirect logic** — unauthenticated users → `/login`; authenticated `/login` → `/dashboard`; protect `(app)` routes
   - *Test:* Direct visit to `/dashboard` without session redirects to `/login`.
-- [ ] **SOUR-015 · Replace raw inputs with UI kit on auth page** — use `Button`, `Input`, `Card`, `Label` from `@/components/ui/*` (HAR-006 overlap)
+- [x] **SOUR-015 · Replace raw inputs with UI kit on auth page** — use `Button`, `Input`, `Card`, `Label` from `@/components/ui/*` (HAR-006 overlap)
   - *Test:* `/login` imports kit components; no raw `<button>`/`<input>` for primary controls.
 
 
