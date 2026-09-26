@@ -65,7 +65,7 @@ export class ApiError extends Error {
 export function getApiBaseUrl(): string {
   const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   if (!raw) {
-    return "";
+    return process.env.NODE_ENV === "development" ? "http://localhost:8000" : "";
   }
   // Strip trailing slashes
   let clean = raw.replace(/\/+$/, "");

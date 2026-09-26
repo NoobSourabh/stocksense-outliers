@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 const apiOrigin = (() => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || (isDev ? "http://localhost:8000" : "");
   if (!baseUrl) return "";
   try {
     return new URL(baseUrl).origin;
