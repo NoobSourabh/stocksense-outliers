@@ -50,3 +50,9 @@ __pycache__/
 .venv/
 venv/
 .tmp/
+
+# Neon
+.neon
+*neon*.md
+*neon*/**/*.md
+.agents/skills/neon*/**/*.md

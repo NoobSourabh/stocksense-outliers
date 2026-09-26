@@ -340,6 +340,7 @@ class StockMoveResponse(CamelModel):
     operation_id: str = Field(alias="operationId")
     reference: str
     type: str
+    status: str
     product_id: str = Field(alias="productId")
     product_name: str = Field(alias="productName")
     product_sku: str = Field(alias="productSku")
