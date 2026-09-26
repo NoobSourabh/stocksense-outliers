@@ -9,16 +9,16 @@
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-- **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Not yet wired to a real backend** — local validation only.
-- **P0 list routes scaffolded**: `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts|deliveries|adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile` — all render with `RouteScaffold` + mock tables/forms.
-- **Dashboard UI built (demo mode)**: KPI cards, URL-synced filter bar, recent operations table; tries `GET /dashboard` and falls back to sample data when backend is down.
+- **Auth page at** `/login`: Login/signup/logout use the backend's HttpOnly cookie session; `/auth/me` protects app routes.
+- **Inventory pages use FastAPI**: product search/create/edit/availability, operations list/create/transitions, stock balances, ledger, profile, and warehouse/location reads.
+- **Dashboard is live**: `/dashboard` supplies summary cards and `/operations` supplies URL-filtered recent operations; demo fallback remains for service failures.
 - **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
 - **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
 - **API client connected**: `lib/api.ts` routes requests through `/api/v1`, forwards the auth cookie, and the frontend now calls the available FastAPI endpoints.
 - **Backend is present**: auth, dashboard, product, operation, move, category, warehouse, location, and partner read endpoints are available.
 - **Backend contract gaps remain**: operations have no PATCH endpoint; warehouse/location write endpoints are not implemented; list APIs return a maximum of 50 rows without usable cursor pagination.
 - **No** `docs/API_CONTRACT.md` **exists yet**: contract is only inside `v2blueprint.md`.
-- **Operation routes present**: receipts, deliveries, and adjustments each have `new` and `[id]` views with demo-local ready/validate/cancel interactions.
+- **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -81,7 +81,7 @@
 
 ### Todo 📋
 
-- [ ] **SOUR-012 · Responsive + demo click-path polish** — ensure all P0 pages work at 390px and 1440px; no overflow
+- [-] **SOUR-012 · Responsive + demo click-path polish** — responsive grids and horizontally scrollable tables are in place; visual review remains
   - *Test:* Open every P0 page at both widths; all actions reachable.
 - [x] **SOUR-013 · Remove console.logs, TODOs, placeholder copy** before feature freeze
   - *Test:* `grep -R "TODO\|FIXME\|console.log\|lorem ipsum" frontend/src/app frontend/src/components` returns nothing demo-facing.
@@ -101,12 +101,12 @@
 | 3 | **SOUR-014 auth guard** — verify session with `/auth/me` and redirect by auth state | Done | ✅ | — |
 | 4 | **SOUR-004 wire login** — login/signup/logout with cookie session and redirect | Done | ✅ | — |
 | 5 | **SOUR-015 kit-ify auth** — use shared `Button`/`Input`/`Card`/`Label` controls | Done | ✅ | — |
-| 6 | **Operation detail scaffolds** — create/detail screens, line table, under-stock warning, demo-local actions | Done | ✅ | — |
-| 7 | **Products list upgrade** — add local search and "New product" link | Done | ✅ | — |
+| 6 | **Operation detail flows** — create/detail routes with live server transitions | Done | ✅ | Draft editing requires an API PATCH endpoint |
+| 7 | **Products CRUD** — live search, create, edit, and location availability | Done | ✅ | Initial stock posting requires backend support |
 | 8 | **Wire dashboard live** — query dashboard and filtered operations; retain fallback | Done | ✅ | — |
 | 9 | **Wire products/operations/moves** — query/mutation hooks for available endpoints | Done | ✅ | Missing backend writes/pagination noted above |
-| 10 | **SOUR-012 responsive pass** — 390px + 1440px on every route; fix table overflow | 30 min | After step 1 | — |
-| 11 | **SOUR-013 cleanup** — grep sweep before feature freeze @ 12:30 | 15 min | @ 12:15 | — |
+| 10 | **SOUR-012 responsive pass** — visually inspect every route at 390px and 1440px | Open | Needs visual review | — |
+| 11 | **SOUR-013 cleanup** — remove debug markers and unused scaffold placeholders | Done | ✅ | — |
 
 ---
 
@@ -322,13 +322,11 @@
 
 ## Active Blockers
 
-1. **No backend exists** — Kunal must start `feature/kunal/backend-core` (KUN-003) immediately. Blocks SOUR-004 and all live API wiring.
+1. **Backend write APIs are incomplete** — operations have no PATCH; warehouse/location writes are not exposed; product initial stock is not posted.
 2. **No** `docs/API_CONTRACT.md` — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
-3. **Auth page not wired to API** — waiting on Kunal's auth endpoints (KUN-008–KUN-010). UI + `apiFetch` client are ready.
-4. **Backend is absent from this checkout** — live auth, products, operations, settings, ledger, and dashboard data need Kunal's API endpoints.
+3. **Ledger pagination is limited** — the backend returns at most 50 rows and does not provide a usable cursor/offset.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 (frontend route and scaffold follow-up)*
-*Completed: SOUR-003 route gaps, location detail route, SOUR-015 auth component kit, operation create/detail scaffolds, and local product search.*
-*Next available work is API integration after the backend endpoints land.*
+*Last updated: Saturday, Sep 26, 2026 (Sourabh API integration follow-up)*
+*Available API integration is complete for auth, dashboard, products, operations, moves, profile, and settings reads. Remaining items require visual viewport review or backend write/pagination endpoints.*

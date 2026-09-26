@@ -47,7 +47,7 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
   return (
     <>
       {navigation.map((item) =>
-        "items" in item ? (
+        "items" in item && item.items ? (
           <details key={item.label} className={mobile ? "group" : "group relative"}>
             <summary
               className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors marker:hidden [&::-webkit-details-marker]:hidden ${

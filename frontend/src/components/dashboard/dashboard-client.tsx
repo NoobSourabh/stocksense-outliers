@@ -29,6 +29,9 @@ interface DashboardOperation {
   schedule_date?: string | null;
   status: OperationStatus | string;
   responsibleUser?: string | null;
+  warehouseId?: string;
+  locationId?: string;
+  categoryId?: string;
   sourceLocationName?: string | null;
   destinationLocationName?: string | null;
 }
