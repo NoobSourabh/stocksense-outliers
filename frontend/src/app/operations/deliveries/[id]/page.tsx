@@ -1,5 +1,6 @@
-import { OperationWorkspace } from "@/components/warehouse/operation-workspace";
+import { DeliveryDetailClient } from "./delivery-detail-client";
+
 export default async function DeliveryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <OperationWorkspace kind="deliveries" mode="detail" id={id} />;
+  return <DeliveryDetailClient deliveryId={id} />;
 }

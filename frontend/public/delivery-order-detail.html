@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html class="h-full bg-[#f8fafc] antialiased" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>Nova Precision WMS — Zenith Nordic Delivery Order WH/OUT/0001</title>
+  <!-- Google Fonts: Geist & Geist Mono -->
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Tailwind CSS CDN with Forms & Container Queries -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <!-- Tailwind Configuration matching Nordic & FrontendDESIGN.md Tokens -->
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+          },
+          colors: {
+            surface: {
+              DEFAULT: '#f8fafc',
+              card: '#ffffff',
+              subtle: '#f1f5f9'
+            },
+            primary: {
+              DEFAULT: '#2563eb',
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          },
+          boxShadow: {
+            'nordic-card': '0 1px 2px 0 rgba(15, 23, 42, 0.03), 0 1px 6px -1px rgba(15, 23, 42, 0.02)',
+            'nordic-float': '0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.92); }
+    }
+    .nordic-pulse {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col font-sans text-slate-800 dark:text-slate-100 bg-[#f8fafc] dark:bg-slate-900 selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100 transition-colors">
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700">
+    <span id="toast-icon"></span>
+    <span id="toast-text"></span>
+    <button onclick="hideToast()" class="ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1" aria-label="Dismiss toast">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+    </button>
+  </div>
+
+  <!-- BEGIN: Minimal Top Navigation Chrome -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 transition-colors">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-14">
+        <!-- Left: Logo & Crisp Main Navigation -->
+        <div class="flex items-center gap-7">
+          <a href="/dashboard" class="flex items-center gap-2.5 group">
+            <div class="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center text-white shadow-xs group-hover:bg-blue-700 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-slate-900 dark:text-white tracking-tight text-[13.5px]">Nova Precision</span>
+              <span class="px-1.5 py-0.5 text-[9.5px] font-medium tracking-wide uppercase bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded">WMS</span>
+            </div>
+          </a>
+          <nav aria-label="Main Navigation" class="hidden md:flex items-center space-x-0.5">
+            <a class="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-md transition-colors" href="/dashboard">Dashboard</a>
+            <a aria-current="page" class="px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/60 rounded-md transition-colors" href="/operations/deliveries">Operations</a>
+            <a class="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-md transition-colors" href="/products">Products</a>
+            <a class="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-md transition-colors" href="/moves">Move History</a>
+            <a class="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-md transition-colors" href="/settings/warehouses">Settings</a>
+          </nav>
+        </div>
+
+        <!-- Right: Search, Notifications & Theme / User Badge -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button id="search-trigger-btn" class="flex items-center gap-2 text-xs text-slate-400 bg-slate-50 dark:bg-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-200/70 dark:border-slate-700 transition-colors" type="button" title="Quick search (⌘K)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+            <span class="hidden sm:inline text-slate-500 dark:text-slate-400">Quick search...</span>
+            <kbd class="font-mono text-[10px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 px-1 py-0.5 rounded text-slate-400 dark:text-slate-300">⌘K</kbd>
+          </button>
+
+          <!-- Notifications trigger -->
+          <div class="relative">
+            <button id="notif-trigger-btn" class="relative p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Notifications" type="button">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+            </button>
+
+            <!-- Notifications Dropdown -->
+            <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 p-4 z-50">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-xs text-slate-900 dark:text-white">Active Alerts</span>
+                  <span class="px-1.5 py-0.5 text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 rounded font-mono font-medium">1 Critical</span>
+                </div>
+                <button onclick="document.getElementById('notif-dropdown').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                </button>
+              </div>
+              <div class="mt-3 space-y-2.5">
+                <div class="p-2.5 rounded-lg bg-red-50/70 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-left">
+                  <p class="text-xs font-semibold text-red-900 dark:text-red-300 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>
+                    Shortage: [CHAIR04]
+                  </p>
+                  <p class="text-[11px] text-red-700 dark:text-red-400 mt-1">Delivery WH/OUT/0001 requires 4 units. Replenishment scheduled on incoming PO #881.</p>
+                  <button onclick="document.getElementById('notif-dropdown').classList.add('hidden'); document.getElementById('po-modal').classList.remove('hidden');" class="mt-2 text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                    View PO #881 →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Theme Toggle -->
+          <button id="theme-toggle-btn" class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Toggle dark mode" type="button">
+            <svg id="theme-icon-sun" class="w-4 h-4 hidden text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            <svg id="theme-icon-moon" class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+          </button>
+
+          <div class="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-0.5 hidden sm:block"></div>
+
+          <!-- User avatar marked [ A ] -->
+          <div class="flex items-center gap-2 group cursor-pointer pl-1">
+            <div class="w-7 h-7 rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center font-mono font-medium text-xs shadow-xs" title="Alex Morgan (Warehouse Dispatch)">
+              A
+            </div>
+            <div class="hidden lg:block text-left">
+              <p class="text-xs font-medium text-slate-800 dark:text-slate-200 leading-tight">Alex Morgan</p>
+              <p class="text-[10px] text-slate-400">Dispatch Lead</p>
+            </div>
+          </div>
+
+          <!-- Mobile Hamburger -->
+          <button id="mobile-menu-btn" class="md:hidden p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" aria-label="Toggle navigation menu">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Drawer -->
+      <div id="mobile-menu-drawer" class="hidden md:hidden py-3 border-t border-slate-200 dark:border-slate-700 space-y-1">
+        <a href="/dashboard" class="block px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">Dashboard</a>
+        <a href="/operations/deliveries" class="block px-3 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 rounded-md">Operations</a>
+        <a href="/products" class="block px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">Products</a>
+        <a href="/moves" class="block px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">Move History</a>
+        <a href="/settings/warehouses" class="block px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">Settings</a>
+      </div>
+    </div>
+  </header>
+  <!-- END: MainHeader -->
+
+  <!-- BEGIN: Minimalist Breadcrumb Bar -->
+  <section aria-label="Breadcrumb Bar" class="border-b border-slate-200/60 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/40">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center text-[11px] text-slate-500 dark:text-slate-400 tracking-tight">
+          <a class="hover:text-slate-800 dark:hover:text-slate-200 transition" href="/operations/deliveries">Operations</a>
+          <svg class="w-3 h-3 mx-1 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          <a class="hover:text-slate-800 dark:hover:text-slate-200 transition" href="/operations/deliveries">Deliveries</a>
+          <svg class="w-3 h-3 mx-1 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          <span class="font-mono font-medium text-slate-800 dark:text-slate-200">WH/OUT/0001</span>
+        </div>
+        <a href="/operations/deliveries" class="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          <span>Back to Manifest</span>
+        </a>
+      </div>
+    </div>
+  </section>
+  <!-- END: BreadcrumbSubNav -->
+
+  <!-- MAIN VIEWPORT -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6">
+
+    <!-- TOP SECTION: Order Title, Sleek Minimal Stepper & Nordic Action Bar -->
+    <section class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-5 sm:p-6 shadow-nordic-card transition-colors">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <!-- Title and Live Status -->
+        <div class="space-y-1">
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-sans">Delivery Order</h1>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60" id="header-status-badge">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+              Waiting Availability
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 dark:text-slate-400">Outbound fulfillment transfer order from Bay 04</p>
+        </div>
+
+        <!-- Nordic Pill Stepper (Draft > Waiting > Ready > Done) -->
+        <div class="relative overflow-x-auto pb-1 sm:pb-0">
+          <div class="inline-flex items-center gap-1 p-1 bg-slate-50 dark:bg-slate-700/50 border border-slate-200/80 dark:border-slate-700 rounded-full text-xs font-medium whitespace-nowrap">
+            <!-- Draft -->
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-slate-400 dark:text-slate-400" id="step-draft">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+              <span>Draft</span>
+            </div>
+            <svg class="w-3 h-3 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <!-- Waiting (Active Pill) -->
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-white font-medium shadow-xs" id="step-waiting">
+              <span class="w-1.5 h-1.5 rounded-full bg-white nordic-pulse"></span>
+              <span>Waiting</span>
+            </div>
+            <svg class="w-3 h-3 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <!-- Ready -->
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-slate-400 dark:text-slate-400 transition" id="step-ready">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+              <span>Ready</span>
+            </div>
+            <svg class="w-3 h-3 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <!-- Done -->
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-slate-400 dark:text-slate-400" id="step-done">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+              <span>Done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- '+ New' outline button -->
+          <button id="btn-new" class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 hover:border-slate-300 transition shadow-xs" type="button">
+            <svg class="w-3.5 h-3.5 mr-1.5 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            New
+          </button>
+          <!-- 'Validate' Cobalt Primary -->
+          <button class="inline-flex items-center px-3.5 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-xs shadow-blue-600/20 active:scale-[0.98]" id="validate-btn" type="button">
+            <svg class="w-3.5 h-3.5 mr-1.5 text-white/90" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Validate
+          </button>
+          <!-- 'Print Slip' Ghost/Outline -->
+          <button id="btn-print" class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition shadow-xs" type="button">
+            <svg class="w-3.5 h-3.5 mr-1.5 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Print Slip
+          </button>
+          <!-- 'Cancel' Muted Text Button -->
+          <button id="btn-cancel" class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition" type="button">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Cancel
+          </button>
+        </div>
+
+        <!-- Quick Stock Simulation Toggle -->
+        <div>
+          <button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-200 bg-slate-50 dark:bg-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-600 rounded-lg transition active:scale-[0.98]" id="toggle-stock-btn" title="Simulate stock replenishment" type="button">
+            <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.038 8.038 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+            <span>Simulate: <strong class="text-amber-700 dark:text-amber-400 font-semibold" id="simulation-state-label">Out-of-Stock</strong></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BEGIN: Sleek Alert Notification Banner -->
+    <div class="bg-red-50/70 dark:bg-red-950/40 text-red-900 dark:text-red-200 border border-red-200/70 dark:border-red-900/50 rounded-xl p-4 shadow-xs transition-all" id="stock-alert-banner" role="alert">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="w-7 h-7 rounded-lg bg-red-100 dark:bg-red-900/60 text-red-600 dark:text-red-300 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path clip-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" fill-rule="evenodd"></path>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-xs font-semibold text-red-900 dark:text-red-200">Inventory Notice: 1 Line Out of Stock</h4>
+            <p class="text-[12px] text-red-700 dark:text-red-300 mt-0.5">
+              Product <span class="font-mono font-semibold">[CHAIR04]</span> has no reservable stock. Replenishment PO #881 arriving tomorrow.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btn-view-po" class="px-2.5 py-1 text-xs font-medium bg-white dark:bg-slate-800 text-red-700 dark:text-red-300 border border-red-200/80 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-slate-700 transition" type="button">
+            View PO #881
+          </button>
+          <button id="btn-recheck" class="px-2.5 py-1 text-xs font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition" type="button">
+            Re-check Availability
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- END: Alert Banner -->
+
+    <!-- BEGIN: Document Reference & Clean Metadata Form -->
+    <section class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-5 sm:p-6 shadow-nordic-card space-y-6 transition-colors">
+      <!-- Prominent Document Reference Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-3">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">Order Reference</span>
+          <span class="text-xl sm:text-2xl font-bold font-mono text-slate-900 dark:text-white tracking-tight" id="order-ref-text">WH/OUT/0001</span>
+          <button id="btn-copy-ref" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 transition" title="Copy reference" type="button">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </button>
+          <span class="hidden sm:inline-block px-2.5 py-0.5 text-xs font-medium rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/50" id="card-status-badge">
+            Waiting Availability
+          </span>
+        </div>
+        <!-- Barcode Pill -->
+        <button id="btn-barcode-preview" class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 dark:bg-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-600 rounded-md font-mono text-xs text-slate-600 dark:text-slate-300 transition">
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+          </svg>
+          <span>BARCODE: *WHO-0001*</span>
+        </button>
+      </div>
+
+      <!-- Floating Clean Nordic Inputs Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+        <!-- Left Column -->
+        <div class="space-y-4">
+          <!-- Delivery Address -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5" for="delivery-address">
+              Delivery Address <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <input class="block w-full rounded-lg border-slate-200 dark:border-slate-600 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 py-2.5 px-3 pr-9 transition bg-slate-50/30 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700/60" id="delivery-address" name="delivery-address" type="text" value="Azure Interior Inc. — 424 Logistics Blvd, Dock Bay 04, Chicago, IL 60601"/>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+                  <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+                </svg>
+              </div>
+            </div>
+            <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-400">Verified customer destination • Loading dock active</p>
+          </div>
+          <!-- Responsible -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5" for="responsible">
+              Responsible Lead <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative flex items-center">
+              <select class="block w-full rounded-lg border-slate-200 dark:border-slate-600 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 py-2.5 px-3 pr-10 transition bg-slate-50/30 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700/60" id="responsible" name="responsible">
+                <option selected>Alex Morgan [A] (Dispatch Lead - Bay 4)</option>
+                <option>Elena Rostova (Senior Inventory Specialist)</option>
+                <option>Marcus Vance (Outbound Coordinator)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <!-- Right Column -->
+        <div class="space-y-4">
+          <!-- Schedule Date -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5" for="schedule-date">
+              Schedule Date &amp; Time <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <input class="block w-full rounded-lg border-slate-200 dark:border-slate-600 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 py-2.5 px-3 transition bg-slate-50/30 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700/60" id="schedule-date" name="schedule-date" type="datetime-local" value="2026-10-26T14:30"/>
+            </div>
+            <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-400">Target SLA dispatch window: within 24h of stock clearance</p>
+          </div>
+          <!-- Operation Type -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5" for="operation-type">
+              Operation Type <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <select class="block w-full rounded-lg border-slate-200 dark:border-slate-600 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 py-2.5 px-3 pr-10 transition bg-slate-50/30 dark:bg-slate-700/30 hover:bg-white dark:hover:bg-slate-700/60" id="operation-type" name="operation-type">
+                <option selected>WH/OUT (Delivery Orders) — Main Warehouse Dispatch</option>
+                <option>WH/INTERNAL (Internal Relocation)</option>
+                <option>WH/PICK (Pick to Staging Zone)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- END: Metadata Form -->
+
+    <!-- BEGIN: Airy Product Line Items Table -->
+    <section class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl shadow-nordic-card overflow-hidden transition-colors">
+      <!-- Minimalist Tab Header -->
+      <div class="border-b border-slate-200/70 dark:border-slate-700 px-5 sm:px-6 pt-3 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-800">
+        <div class="flex space-x-6">
+          <button id="tab-btn-products" class="pb-3 text-xs font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 flex items-center gap-2" type="button">
+            <span>Products</span>
+            <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300" id="line-count-badge">2 Items</span>
+          </button>
+          <button id="tab-btn-info" class="pb-3 text-xs font-medium text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-b-2 border-transparent transition" type="button">
+            Additional Info
+          </button>
+          <button id="tab-btn-notes" class="pb-3 text-xs font-medium text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-b-2 border-transparent transition" type="button">
+            Notes &amp; Instructions
+          </button>
+        </div>
+        <div class="pb-2 hidden sm:flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-400">
+          <span>Staging Bay:</span>
+          <span class="font-medium text-slate-700 dark:text-slate-200">Dock Bay #4</span>
+        </div>
+      </div>
+
+      <!-- Tab Content: Products -->
+      <div id="tab-content-products">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-100 dark:divide-slate-700 text-left text-xs" id="delivery-items-table">
+            <thead class="bg-slate-50/70 dark:bg-slate-700/40 text-slate-500 dark:text-slate-400 font-medium tracking-tight">
+              <tr>
+                <th class="py-3.5 pl-6 pr-3" scope="col">Product Details</th>
+                <th class="px-3 py-3.5 text-right" scope="col">Demand</th>
+                <th class="px-3 py-3.5 text-right" scope="col">Reserved / Available</th>
+                <th class="px-3 py-3.5" scope="col">Unit</th>
+                <th class="px-3 py-3.5 text-center" scope="col">Stock Status</th>
+                <th class="relative py-3.5 pl-3 pr-6 text-right" scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800" id="table-body">
+              <!-- Row 1: Solid Pine Ergonomic Desk (IN STOCK) -->
+              <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="py-4 pl-6 pr-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200/80 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-mono text-[10px]">
+                      DSK
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-mono font-medium text-blue-700 dark:text-blue-400">[DESK001]</span>
+                        <span class="font-medium text-slate-900 dark:text-slate-100">Solid Pine Ergonomic Desk</span>
+                      </div>
+                      <div class="text-[11px] text-slate-400">Zone B2-R12 • SKU: 98402-DSK</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-4 text-right font-mono font-medium text-slate-900 dark:text-slate-100 text-sm">6</td>
+                <td class="px-3 py-4 text-right font-mono text-emerald-600 dark:text-emerald-400 font-medium">6 / 6 Reserved</td>
+                <td class="px-3 py-4 text-slate-400">Units</td>
+                <td class="px-3 py-4 text-center">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    In Stock Ready
+                  </span>
+                </td>
+                <td class="py-4 pl-3 pr-6 text-right space-x-2">
+                  <button onclick="editRow(this)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 transition" title="Edit row" type="button">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+                  </button>
+                  <button onclick="deleteRow(this)" class="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 transition" title="Delete row" type="button">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Row 2: OUT OF STOCK ITEM -->
+              <tr class="bg-rose-50/50 dark:bg-rose-950/30 text-red-950 dark:text-red-200 border-l-4 border-l-red-500 transition-colors" id="out-of-stock-row">
+                <td class="py-4 pl-5 pr-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-red-100/80 dark:bg-red-900/40 border border-red-200 dark:border-red-800 flex items-center justify-center text-red-700 dark:text-red-300 font-mono text-[10px]">
+                      CHR
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-mono font-medium text-red-700 dark:text-red-400" id="oos-sku-tag">[CHAIR04]</span>
+                        <span class="font-medium text-red-950 dark:text-red-200">Executive Mesh Ergonomic Chair</span>
+                      </div>
+                      <div class="text-[11px] text-red-600 dark:text-red-400 font-medium" id="oos-subtext">Shortage: 4 units deficit • Bin A4-Empty</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-4 text-right font-mono font-semibold text-red-950 dark:text-red-200 text-sm">4</td>
+                <td class="px-3 py-4 text-right font-mono text-red-700 dark:text-red-400 font-medium" id="oos-reserved-cell">0 / 4 Reserved</td>
+                <td class="px-3 py-4 text-red-600 dark:text-red-400">Units</td>
+                <td class="px-3 py-4 text-center" id="oos-status-cell">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-red-100 dark:bg-red-950/70 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 nordic-pulse"></span>
+                    Out of Stock
+                  </span>
+                </td>
+                <td class="py-4 pl-3 pr-6 text-right space-x-2">
+                  <button onclick="document.getElementById('po-modal').classList.remove('hidden')" class="text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1 transition" title="Shortage Details" type="button">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+                  </button>
+                  <button onclick="deleteRow(this)" class="text-red-300 hover:text-red-700 dark:hover:text-red-400 p-1 transition" title="Delete row" type="button">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Clean '+ Add product line' Button -->
+        <div class="p-4 bg-slate-50/50 dark:bg-slate-700/30 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+          <button class="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3.5 py-2 transition shadow-xs hover:border-slate-300 active:scale-[0.98]" id="add-line-btn" type="button">
+            <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Add product line
+          </button>
+          <span class="text-[11px] text-slate-400 dark:text-slate-400 font-mono flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Barcode scanner listener active
+          </span>
+        </div>
+      </div>
+
+      <!-- Tab Content: Additional Info -->
+      <div id="tab-content-info" class="hidden p-6 space-y-4 text-xs text-slate-600 dark:text-slate-300">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200/80 dark:border-slate-700 space-y-2">
+            <h4 class="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Shipping &amp; Pallet Specs</h4>
+            <p><span class="text-slate-400">Packaging Type:</span> Euro-Pallet Stacking (EPAL 1)</p>
+            <p><span class="text-slate-400">Total Pallets:</span> 2 Pallets (Shrink-wrapped)</p>
+            <p><span class="text-slate-400">Gross Weight:</span> 142.0 kg</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200/80 dark:border-slate-700 space-y-2">
+            <h4 class="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Carrier &amp; Logistics Window</h4>
+            <p><span class="text-slate-400">Assigned Fleet:</span> SwiftLog Express (TRK-99201)</p>
+            <p><span class="text-slate-400">Dock Loading Gate:</span> Gate 04 (Main Outbound)</p>
+            <p><span class="text-slate-400">Carrier Cutoff:</span> 17:00 CST</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200/80 dark:border-slate-700 space-y-2">
+            <h4 class="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Customer Contact</h4>
+            <p><span class="text-slate-400">Receiving Desk:</span> Anita Vance</p>
+            <p><span class="text-slate-400">Direct Line:</span> +1 (312) 555-0194</p>
+            <p><span class="text-slate-400">Forklift Ramp:</span> Confirmed Available</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Notes & Instructions -->
+      <div id="tab-content-notes" class="hidden p-6 space-y-4 text-xs text-slate-600 dark:text-slate-300">
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200/80 dark:border-slate-700 space-y-3">
+          <h4 class="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Warehouse Picking &amp; Dock Safety Instructions</h4>
+          <ul class="list-disc pl-5 space-y-1.5">
+            <li>Fragile veneer surface on Solid Pine Desks. Ensure dual corner-guard protectors prior to strapping.</li>
+            <li>Scan individual serial barcodes on all chair cartons as they leave Bay 04 buffer.</li>
+            <li>Customer requires delivery confirmation email sent automatically upon carrier dock departure.</li>
+            <li>In the event of weather delay, hold pallet at Staging Buffer 4B under climate control.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+    <!-- END: Table -->
+
+    <!-- BEGIN: Minimalist 3-Column Stats Rail -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Weight & Volume Card -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-4 shadow-nordic-card transition-colors">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Weight &amp; Volume</span>
+        <div class="mt-2 flex items-baseline justify-between">
+          <div>
+            <p class="text-xl font-bold font-mono text-slate-900 dark:text-white" id="stats-weight">142.0 <span class="text-xs font-normal text-slate-400">kg</span></p>
+            <p class="text-xs text-slate-400 mt-0.5 font-mono">1.82 m³ total cargo</p>
+          </div>
+          <span class="px-2 py-0.5 text-[10px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded">Standard Freight</span>
+        </div>
+      </div>
+      <!-- Carrier Card -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-4 shadow-nordic-card transition-colors">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Carrier Assignment</span>
+        <div class="mt-2 flex items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">SwiftLog Express</p>
+            <p class="text-xs text-slate-400 mt-0.5 font-mono">TRK-99201-IL • Fleet #12</p>
+          </div>
+          <span class="w-2 h-2 rounded-full bg-emerald-500" title="Assigned and verified"></span>
+        </div>
+      </div>
+      <!-- Live Sync Status Card -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-4 shadow-nordic-card transition-colors">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">System State</span>
+          <button onclick="showToast('State synchronized with central warehouse node.', 'info')" class="text-slate-400 hover:text-blue-600 p-0.5" title="Refresh state">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.038 8.038 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          </button>
+        </div>
+        <div class="mt-2 space-y-1">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-400">Order Author:</span>
+            <span class="font-medium text-slate-700 dark:text-slate-300">Alex Morgan</span>
+          </div>
+          <div class="flex justify-between text-xs items-center">
+            <span class="text-slate-400">Live Sync:</span>
+            <span class="font-mono text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 14ms (Optimal)
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- END: Stats Rail -->
+  </main>
+
+  <!-- BEGIN: Minimal Footer -->
+  <footer class="mt-auto bg-white dark:bg-slate-800 border-t border-slate-200/70 dark:border-slate-700 py-3.5 text-xs text-slate-400 transition-colors">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+        <span class="font-medium text-slate-700 dark:text-slate-300">Nova Precision WMS</span>
+        <span>•</span>
+        <span>Nordic Core v4.12</span>
+        <span>•</span>
+        <span class="text-slate-400">Node US-EAST-04</span>
+      </div>
+      <div class="flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+        <button onclick="document.getElementById('map-modal').classList.remove('hidden')" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Warehouse Map</button>
+        <button onclick="showToast('Discrepancy log synced: 0 active unhandled variances.', 'info')" class="hover:text-blue-600 dark:hover:text-blue-400 transition">Discrepancy Log</button>
+        <button onclick="showToast('REST API v4 docs accessible at /api/docs/endpoints', 'info')" class="hover:text-blue-600 dark:hover:text-blue-400 transition">API Docs</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS & OVERLAYS FOR RESPONSIVE INTERACTIONS                             -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. NEW ORDER MODAL -->
+  <div id="new-order-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Create New Delivery Order</h3>
+        <button onclick="document.getElementById('new-order-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+        </button>
+      </div>
+      <form onsubmit="handleCreateOrder(event)" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-medium text-slate-600 dark:text-slate-300 mb-1">Destination Customer</label>
+          <input required placeholder="e.g. Apex Industrial Ltd." class="w-full rounded-lg border-slate-200 dark:border-slate-600 dark:bg-slate-700 p-2.5 text-xs"/>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-300 mb-1">Source Bay</label>
+            <select class="w-full rounded-lg border-slate-200 dark:border-slate-600 dark:bg-slate-700 p-2.5 text-xs">
+              <option>Dock Bay 04 (Main)</option>
+              <option>Dock Bay 02 (Bulk)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-600 dark:text-slate-300 mb-1">Carrier</label>
+            <select class="w-full rounded-lg border-slate-200 dark:border-slate-600 dark:bg-slate-700 p-2.5 text-xs">
+              <option>SwiftLog Express</option>
+              <option>FedEx Freight Direct</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="document.getElementById('new-order-modal').classList.add('hidden')" class="px-4 py-2 font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-4 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Create Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. PO #881 DETAILS MODAL -->
+  <div id="po-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 bg-red-50/50 dark:bg-red-950/20">
+        <h3 class="text-sm font-bold text-red-950 dark:text-red-200">Replenishment Manifest PO #881</h3>
+        <button onclick="document.getElementById('po-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-700/40 rounded-xl">
+          <div><span class="text-slate-400 block text-[11px]">Supplier</span><span class="font-semibold text-slate-900 dark:text-white">Ergoflex Nordic AB</span></div>
+          <div><span class="text-slate-400 block text-[11px]">Expected ETA</span><span class="font-semibold text-emerald-600 font-mono">Tomorrow 08:30 AM</span></div>
+          <div><span class="text-slate-400 block text-[11px]">Carrier</span><span class="font-medium text-slate-800 dark:text-slate-200">DHL Freight #FR-88192</span></div>
+          <div><span class="text-slate-400 block text-[11px]">Receiving Bay</span><span class="font-medium text-slate-800 dark:text-slate-200">Gate 01 (Inbound)</span></div>
+        </div>
+        <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+          <div class="flex justify-between font-medium"><span>[CHAIR04] Mesh Ergonomic Chair</span><span class="font-mono text-emerald-600">20 Units Inbound</span></div>
+          <p class="text-[11px] text-slate-400 mt-1">4 units will be immediately cross-docked to WH/OUT/0001.</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="document.getElementById('po-modal').classList.add('hidden')" class="px-4 py-2 font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Close</button>
+          <button type="button" onclick="document.getElementById('po-modal').classList.add('hidden'); document.getElementById('toggle-stock-btn').click();" class="px-4 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Simulate Inbound Receipt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. BARCODE PREVIEW MODAL -->
+  <div id="barcode-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm text-center p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <span class="text-xs font-semibold text-slate-400 uppercase">Scannable Manifest Barcode</span>
+        <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+        </button>
+      </div>
+      <div class="p-6 bg-white rounded-xl border border-slate-200 flex flex-col items-center">
+        <div class="flex items-center gap-[3px] h-20 w-full justify-center">
+          <div class="bg-slate-900 h-full w-2"></div><div class="bg-slate-900 h-full w-1"></div>
+          <div class="bg-slate-900 h-full w-3"></div><div class="bg-slate-900 h-full w-1"></div>
+          <div class="bg-slate-900 h-full w-4"></div><div class="bg-slate-900 h-full w-2"></div>
+          <div class="bg-slate-900 h-full w-1"></div><div class="bg-slate-900 h-full w-3"></div>
+          <div class="bg-slate-900 h-full w-2"></div><div class="bg-slate-900 h-full w-4"></div>
+          <div class="bg-slate-900 h-full w-1"></div><div class="bg-slate-900 h-full w-3"></div>
+        </div>
+        <p class="font-mono text-sm tracking-widest text-slate-900 font-bold mt-3">*WHO-0001*</p>
+        <p class="text-[10px] text-slate-400 font-mono">Code-128 • Nova WMS Token</p>
+      </div>
+      <div class="flex justify-center gap-2">
+        <button onclick="window.print()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">Print</button>
+        <button onclick="document.getElementById('barcode-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. SEARCH MODAL (⌘K) -->
+  <div id="search-modal" class="fixed inset-0 z-50 hidden flex items-start justify-center p-4 pt-20 bg-slate-900/50 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden">
+      <div class="flex items-center px-4 border-b border-slate-200 dark:border-slate-700">
+        <svg class="w-4 h-4 text-slate-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2"/></svg>
+        <input id="search-input" autofocus type="text" placeholder="Search products, orders, SKUs, or locations..." class="w-full py-3.5 text-xs bg-transparent border-0 focus:ring-0 text-slate-900 dark:text-white placeholder-slate-400"/>
+        <kbd class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-400">ESC</kbd>
+      </div>
+      <div class="p-3 max-h-72 overflow-y-auto space-y-1 text-xs">
+        <button onclick="document.getElementById('search-modal').classList.add('hidden'); showToast('Focused on Solid Pine Desk', 'info');" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 flex justify-between">
+          <span><strong class="text-blue-600 font-mono">[DESK001]</strong> Solid Pine Ergonomic Desk</span>
+          <span class="text-slate-400 font-mono">6 Units</span>
+        </button>
+        <button onclick="document.getElementById('search-modal').classList.add('hidden'); showToast('Focused on Mesh Chair', 'info');" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 flex justify-between">
+          <span><strong class="text-red-600 font-mono">[CHAIR04]</strong> Executive Mesh Ergonomic Chair</span>
+          <span class="text-slate-400 font-mono">4 Units (Shortage)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. WAREHOUSE MAP MODAL -->
+  <div id="map-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-xl p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Warehouse Central Map — Bay 04 Staging</h3>
+        <button onclick="document.getElementById('map-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2"/></svg>
+        </button>
+      </div>
+      <div class="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+        <div class="grid grid-cols-4 gap-2 text-center font-mono">
+          <div class="p-3 bg-blue-100 dark:bg-blue-950/70 border-2 border-blue-600 text-blue-900 dark:text-blue-200 rounded-lg">
+            <p class="font-bold text-xs">BAY 04</p>
+            <p class="text-[10px] text-blue-600 dark:text-blue-400">Order WH/OUT/0001</p>
+          </div>
+          <div class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400">
+            <p class="font-bold text-xs">BAY 03</p>
+            <p class="text-[10px]">Staged</p>
+          </div>
+          <div class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400">
+            <p class="font-bold text-xs">BAY 02</p>
+            <p class="text-[10px]">Active Loading</p>
+          </div>
+          <div class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400">
+            <p class="font-bold text-xs">BAY 01</p>
+            <p class="text-[10px]">Inbound PO #881</p>
+          </div>
+        </div>
+        <p class="mt-3 text-slate-500 text-[11px] text-center">Forklift Lane 2 clear. Automated Guided Vehicle (AGV) path nominal.</p>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="document.getElementById('map-modal').classList.add('hidden')" class="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg">Close Map</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT FOR ALL INTERACTIVE BUTTONS & RESPONSIVE BEHAVIOR -->
+  <script>
+    // Toast notification
+    function showToast(msg, type = "success") {
+      const toast = document.getElementById('toast');
+      const text = document.getElementById('toast-text');
+      const icon = document.getElementById('toast-icon');
+      text.textContent = msg;
+
+      if (type === "warning") {
+        icon.innerHTML = `<svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>`;
+      } else if (type === "info") {
+        icon.innerHTML = `<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+      } else {
+        icon.innerHTML = `<svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>`;
+      }
+
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+
+    function hideToast() {
+      document.getElementById('toast').classList.add('hidden');
+    }
+
+    // Toggle Simulation
+    const toggleBtn = document.getElementById('toggle-stock-btn');
+    const simLabel = document.getElementById('simulation-state-label');
+    const alertBanner = document.getElementById('stock-alert-banner');
+    const oosRow = document.getElementById('out-of-stock-row');
+    const oosReserved = document.getElementById('oos-reserved-cell');
+    const oosStatus = document.getElementById('oos-status-cell');
+    const headerStatusBadge = document.getElementById('header-status-badge');
+    const cardStatusBadge = document.getElementById('card-status-badge');
+    const stepWaiting = document.getElementById('step-waiting');
+    const stepReady = document.getElementById('step-ready');
+    const stepDone = document.getElementById('step-done');
+    const validateBtn = document.getElementById('validate-btn');
+
+    let isOutOfStock = true;
+    let isDone = false;
+
+    toggleBtn.addEventListener('click', () => {
+      isOutOfStock = !isOutOfStock;
+
+      if (isOutOfStock) {
+        simLabel.textContent = "Out-of-Stock";
+        simLabel.className = "text-amber-700 dark:text-amber-400 font-semibold";
+        alertBanner.classList.remove('hidden');
+
+        oosRow.className = "bg-rose-50/50 dark:bg-rose-950/30 text-red-950 dark:text-red-200 border-l-4 border-l-red-500 transition-colors";
+        oosReserved.className = "px-3 py-4 text-right font-mono text-red-700 dark:text-red-400 font-medium";
+        oosReserved.textContent = "0 / 4 Reserved";
+        oosStatus.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-red-100 dark:bg-red-950/70 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 nordic-pulse"></span>
+            Out of Stock
+          </span>
+        `;
+
+        stepWaiting.className = "flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-white font-medium shadow-xs";
+        stepWaiting.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white nordic-pulse"></span><span>Waiting</span>`;
+
+        stepReady.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-slate-400 dark:text-slate-400 transition";
+        stepReady.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span><span>Ready</span>`;
+
+        headerStatusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60";
+        headerStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Waiting Availability`;
+
+        cardStatusBadge.textContent = "Waiting Availability";
+        showToast("Simulated deficit: Product [CHAIR04] set to Out of Stock.", "warning");
+
+      } else {
+        simLabel.textContent = "In-Stock / Ready";
+        simLabel.className = "text-emerald-700 dark:text-emerald-400 font-semibold";
+        alertBanner.classList.add('hidden');
+
+        oosRow.className = "hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition-colors bg-white dark:bg-slate-800";
+        oosReserved.className = "px-3 py-4 text-right font-mono text-emerald-600 dark:text-emerald-400 font-medium";
+        oosReserved.textContent = "4 / 4 Reserved";
+        oosStatus.innerHTML = `
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            In Stock Ready
+          </span>
+        `;
+
+        stepWaiting.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-800/40";
+        stepWaiting.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg><span>Waiting</span>`;
+
+        stepReady.className = "flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600 text-white font-medium shadow-xs";
+        stepReady.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white nordic-pulse"></span><span>Ready</span>`;
+
+        headerStatusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800/60";
+        headerStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>Ready for Dispatch`;
+
+        cardStatusBadge.textContent = "Ready for Dispatch";
+        showToast("Simulated replenishment: Product [CHAIR04] is now 100% reserved!", "success");
+      }
+    });
+
+    // Validate Action
+    validateBtn.addEventListener('click', () => {
+      if (isDone) {
+        showToast("Order has already been validated and dispatched.", "info");
+        return;
+      }
+
+      if (isOutOfStock) {
+        showToast("Cannot validate: 1 item has insufficient stock. Please check replenishment.", "warning");
+        return;
+      }
+
+      // Mark Done
+      isDone = true;
+      stepReady.className = "flex items-center gap-1.5 px-3 py-1 rounded-full text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-800/40";
+      stepReady.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg><span>Ready</span>`;
+
+      stepDone.className = "flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 text-white font-medium shadow-xs";
+      stepDone.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white"></span><span>Done</span>`;
+
+      headerStatusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60";
+      headerStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Done (Dispatched)`;
+
+      validateBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      validateBtn.textContent = "Validated";
+
+      showToast("Order WH/OUT/0001 validated! Dispatched to Gate 04.", "success");
+    });
+
+    // Print button
+    document.getElementById('btn-print').addEventListener('click', () => {
+      window.print();
+    });
+
+    // Cancel button
+    document.getElementById('btn-cancel').addEventListener('click', () => {
+      if (confirm("Are you sure you want to cancel delivery order WH/OUT/0001? All reserved stock will be returned.")) {
+        headerStatusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200";
+        headerStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Canceled Order`;
+        showToast("Delivery order WH/OUT/0001 canceled.", "warning");
+      }
+    });
+
+    // New Order button
+    document.getElementById('btn-new').addEventListener('click', () => {
+      document.getElementById('new-order-modal').classList.remove('hidden');
+    });
+
+    function handleCreateOrder(e) {
+      e.preventDefault();
+      document.getElementById('new-order-modal').classList.add('hidden');
+      showToast("Draft delivery order created successfully.", "success");
+    }
+
+    // View PO button
+    document.getElementById('btn-view-po').addEventListener('click', () => {
+      document.getElementById('po-modal').classList.remove('hidden');
+    });
+
+    // Recheck Availability
+    document.getElementById('btn-recheck').addEventListener('click', () => {
+      showToast("Scanning live bin racks...", "info");
+      setTimeout(() => {
+        if (isOutOfStock) {
+          showToast("Live check: Bin A4 remains empty. Inbound PO #881 confirmed on schedule.", "info");
+        } else {
+          showToast("Live check: All items present and verified in rack locations.", "success");
+        }
+      }, 700);
+    });
+
+    // Copy reference
+    document.getElementById('btn-copy-ref').addEventListener('click', () => {
+      navigator.clipboard?.writeText("WH/OUT/0001");
+      showToast("Copied WH/OUT/0001 to clipboard!", "info");
+    });
+
+    // Barcode preview
+    document.getElementById('btn-barcode-preview').addEventListener('click', () => {
+      document.getElementById('barcode-modal').classList.remove('hidden');
+    });
+
+    // Tabs
+    const tabProducts = document.getElementById('tab-btn-products');
+    const tabInfo = document.getElementById('tab-btn-info');
+    const tabNotes = document.getElementById('tab-btn-notes');
+    const contentProducts = document.getElementById('tab-content-products');
+    const contentInfo = document.getElementById('tab-content-info');
+    const contentNotes = document.getElementById('tab-content-notes');
+
+    tabProducts.addEventListener('click', () => {
+      tabProducts.className = "pb-3 text-xs font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 flex items-center gap-2";
+      tabInfo.className = "pb-3 text-xs font-medium text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition";
+      tabNotes.className = "pb-3 text-xs font-medium text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition";
+      contentProducts.classList.remove('hidden');
+      contentInfo.classList.add('hidden');
+      contentNotes.classList.add('hidden');
+    });
+
+    tabInfo.addEventListener('click', () => {
+      tabInfo.className = "pb-3 text-xs font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 flex items-center gap-2";
+      tabProducts.className = "pb-3 text-xs font-medium text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition";
+      tabNotes.className = "pb-3 text-xs font-medium text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition";
+      contentProducts.classList.add('hidden');
+      contentInfo.classList.remove('hidden');
+      contentNotes.classList.add('hidden');
+    });
+
+    tabNotes.addEventListener('click', () => {
+      tabNotes.className = "pb-3 text-xs font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 flex items-center gap-2";
+      tabProducts.className = "pb-3 text-xs font-medium text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition";
+      tabInfo.className = "pb-3 text-xs font-medium text-slate-400 hover:text-slate-700 border-b-2 border-transparent transition";
+      contentProducts.classList.add('hidden');
+      contentInfo.classList.add('hidden');
+      contentNotes.classList.remove('hidden');
+    });
+
+    // Add Product Line
+    const addLineBtn = document.getElementById('add-line-btn');
+    const tableBody = document.getElementById('table-body');
+    const lineCountBadge = document.getElementById('line-count-badge');
+    let lineCount = 2;
+
+    addLineBtn.addEventListener('click', () => {
+      lineCount++;
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition-colors";
+      tr.innerHTML = `
+        <td class="py-4 pl-6 pr-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-mono text-[10px]">
+              PKG
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono font-medium text-blue-700 dark:text-blue-400">[BOX0${lineCount}]</span>
+                <span class="font-medium text-slate-900 dark:text-slate-100">Recycled Shipping Container Size L</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Zone C1-R04 • SKU: 44021-PKG</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-3 py-4 text-right font-mono font-medium text-slate-900 dark:text-slate-100 text-sm">10</td>
+        <td class="px-3 py-4 text-right font-mono text-emerald-600 dark:text-emerald-400 font-medium">10 / 10 Reserved</td>
+        <td class="px-3 py-4 text-slate-400">Units</td>
+        <td class="px-3 py-4 text-center">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            In Stock Ready
+          </span>
+        </td>
+        <td class="py-4 pl-3 pr-6 text-right space-x-2">
+          <button onclick="editRow(this)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1" title="Edit row" type="button">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+          </button>
+          <button onclick="deleteRow(this)" class="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1" title="Delete row" type="button">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+          </button>
+        </td>
+      `;
+      tableBody.appendChild(tr);
+      lineCountBadge.textContent = `${lineCount} Items`;
+      document.getElementById('stats-weight').innerHTML = `${(lineCount * 71).toFixed(1)} <span class="text-xs font-normal text-slate-400">kg</span>`;
+      showToast("Added Recycled Shipping Container line to manifest.", "success");
+    });
+
+    function deleteRow(btn) {
+      const row = btn.closest('tr');
+      row.remove();
+      lineCount = Math.max(1, lineCount - 1);
+      lineCountBadge.textContent = `${lineCount} Items`;
+      document.getElementById('stats-weight').innerHTML = `${(lineCount * 71).toFixed(1)} <span class="text-xs font-normal text-slate-400">kg</span>`;
+      showToast("Line item removed.", "info");
+    }
+
+    function editRow(btn) {
+      const newQty = prompt("Enter updated demand quantity:", "8");
+      if (newQty && !isNaN(newQty)) {
+        const row = btn.closest('tr');
+        row.querySelector('td:nth-child(2)').textContent = newQty;
+        row.querySelector('td:nth-child(3)').textContent = `${newQty} / ${newQty} Reserved`;
+        showToast("Line demand updated.", "info");
+      }
+    }
+
+    // Search modal triggers
+    document.getElementById('search-trigger-btn').addEventListener('click', () => {
+      document.getElementById('search-modal').classList.remove('hidden');
+    });
+
+    // Notifications trigger
+    document.getElementById('notif-trigger-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('notif-dropdown').classList.toggle('hidden');
+    });
+
+    // Theme toggle
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const sunIcon = document.getElementById('theme-icon-sun');
+    const moonIcon = document.getElementById('theme-icon-moon');
+
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      if (isDark) {
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+      } else {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+      }
+    });
+
+    // Mobile Hamburger
+    document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+      document.getElementById('mobile-menu-drawer').classList.toggle('hidden');
+    });
+
+    // Keyboard shortcut ⌘K
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        document.getElementById('search-modal').classList.toggle('hidden');
+      }
+      if (e.key === 'Escape') {
+        document.getElementById('search-modal').classList.add('hidden');
+        document.getElementById('po-modal').classList.add('hidden');
+        document.getElementById('barcode-modal').classList.add('hidden');
+        document.getElementById('map-modal').classList.add('hidden');
+        document.getElementById('new-order-modal').classList.add('hidden');
+        document.getElementById('notif-dropdown').classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
