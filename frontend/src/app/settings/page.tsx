@@ -8,109 +8,109 @@ import {
   Moon,
   Menu,
   X as CloseIcon,
-  Save,
+  Check,
   Plus,
   QrCode,
   Warehouse,
   MapPin,
-  Badge,
-  Settings,
-  ArrowDown,
-  Info,
+  Pencil,
+  Lock,
+  Clock,
   CheckCircle2,
-  Filter,
-  MoreVertical,
+  Shield,
   Layers,
   LayoutGrid,
   Truck,
   Package,
   History,
-  Check,
+  Settings,
+  ChevronRight,
+  GitBranch,
+  User,
+  SlidersHorizontal,
 } from "lucide-react";
 
-interface LocationItem {
+interface SectorItem {
   id: string;
+  code: string;
   name: string;
-  description: string;
-  subCode: string;
   category: string;
   occupancy: number;
-  status: "Online" | "Maintenance" | "Offline";
-  iconName: string;
+  occupancyStatus: "Critical" | "Nominal" | "Normal" | "Safe";
+  barColor: string;
+  status: "Online" | "Maintenance";
 }
 
-const INITIAL_LOCATIONS: LocationItem[] = [
+const INITIAL_SECTORS: SectorItem[] = [
   {
-    id: "loc-1",
+    id: "sec-1",
+    code: "Stock1",
     name: "Main Storage Bay (Ground Floor)",
-    description: "General pallet racks & bulk cases",
-    subCode: "Stock1",
     category: "Internal Storage",
     occupancy: 92,
+    occupancyStatus: "Critical",
+    barColor: "bg-amber-600 dark:bg-amber-500",
     status: "Online",
-    iconName: "shelves",
   },
   {
-    id: "loc-2",
+    id: "sec-2",
+    code: "Stock2",
     name: "Inflow Staging & Cross-dock",
-    description: "Direct carrier unloading lanes",
-    subCode: "Stock2",
     category: "Dock Buffer",
     occupancy: 45,
+    occupancyStatus: "Nominal",
+    barColor: "bg-blue-600",
     status: "Online",
-    iconName: "move_to_inbox",
   },
   {
-    id: "loc-3",
+    id: "sec-3",
+    code: "Rack-A",
     name: "High-density Pallet Racks",
-    description: "Aisle A01 to A14 motorized lifter zone",
-    subCode: "Rack-A",
     category: "High Density Vertical",
     occupancy: 78,
+    occupancyStatus: "Normal",
+    barColor: "bg-blue-600",
     status: "Online",
-    iconName: "grid_view",
   },
   {
-    id: "loc-4",
+    id: "sec-4",
+    code: "ColdRoom",
     name: "Climate Controlled Chamber",
-    description: "Constant temperature: 4°C - 8°C",
-    subCode: "ColdRoom",
-    category: "Cold Storage",
+    category: "Cold Storage (4°C - 8°C)",
     occupancy: 34,
+    occupancyStatus: "Safe",
+    barColor: "bg-emerald-600 dark:bg-emerald-500",
     status: "Online",
-    iconName: "ac_unit",
   },
 ];
 
-export default function WarehouseSettingsPage() {
+export default function WarehouseDetailsMobilePage() {
   const theme = useTheme();
 
-  // Form State
-  const [warehouseName, setWarehouseName] = useState("Main Central Logistics Hub");
-  const [shortCode, setShortCode] = useState("WH");
+  // Core Parameters State
+  const [facilityName, setFacilityName] = useState("Main Central Logistics Hub");
+  const [prefixCode, setPrefixCode] = useState("WH");
   const [facilityAddress, setFacilityAddress] = useState(
     "Industrial Area Phase 2, Bay 4 & 5, Logistics Corridor, Sector 62, 560066"
   );
-  const [manager, setManager] = useState("Alex Morgan (Lead Operator)");
-  const [operatingSchedule, setOperatingSchedule] = useState("24/7 Continuous Inflow");
+  const [operationalHead, setOperationalHead] = useState("Alex Morgan (Lead)");
+  const [dutyMatrix, setDutyMatrix] = useState("24/7 Continuous Inflow");
   const [enforceLotScanning, setEnforceLotScanning] = useState(true);
   const [autoCrossDock, setAutoCrossDock] = useState(true);
 
-  // Locations state
-  const [locations, setLocations] = useState<LocationItem[]>(INITIAL_LOCATIONS);
-  const [filterMode, setFilterMode] = useState<"all" | "high_occupancy">("all");
+  // Sector list state
+  const [sectors, setSectors] = useState<SectorItem[]>(INITIAL_SECTORS);
 
   // Modals & Feedback
   const [isSaving, setIsSaving] = useState(false);
-  const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
-  const [isAddWarehouseOpen, setIsAddWarehouseOpen] = useState(false);
+  const [isAddZoneOpen, setIsAddZoneOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // New location form state
-  const [newLocName, setNewLocName] = useState("");
-  const [newLocSubCode, setNewLocSubCode] = useState("");
-  const [newLocCategory, setNewLocCategory] = useState("Internal Storage");
-  const [newLocOccupancy, setNewLocOccupancy] = useState(25);
+  // Add Zone Form
+  const [newZoneName, setNewZoneName] = useState("");
+  const [newZoneCode, setNewZoneCode] = useState("");
+  const [newZoneCategory, setNewZoneCategory] = useState("Internal Storage");
+  const [newZoneOccupancy, setNewZoneOccupancy] = useState(50);
 
   // Toast State
   const [toast, setToast] = useState<{
@@ -130,112 +130,100 @@ export default function WarehouseSettingsPage() {
     }, 3200);
   };
 
-  // Handle Save
+  // Actions
   const handleSave = () => {
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
       triggerToast(
-        "Warehouse Config Updated",
-        `Prefix '${shortCode.toUpperCase()}' validated & synchronized across ${locations.length} child zones.`
+        "Configuration Saved",
+        `Prefix '${prefixCode}' synchronized across ${sectors.length} sectors.`
       );
-    }, 600);
+    }, 500);
   };
 
-  // Handle Discard
   const handleDiscard = () => {
-    setWarehouseName("Main Central Logistics Hub");
-    setShortCode("WH");
+    setFacilityName("Main Central Logistics Hub");
+    setPrefixCode("WH");
     setFacilityAddress(
       "Industrial Area Phase 2, Bay 4 & 5, Logistics Corridor, Sector 62, 560066"
     );
-    setManager("Alex Morgan (Lead Operator)");
-    setOperatingSchedule("24/7 Continuous Inflow");
+    setOperationalHead("Alex Morgan (Lead)");
+    setDutyMatrix("24/7 Continuous Inflow");
     setEnforceLotScanning(true);
     setAutoCrossDock(true);
-    triggerToast("Form Reset", "Configuration reverted to saved state.");
+    triggerToast("Discarded", "Reverted changes to stored database state.");
   };
 
-  // Handle Add Location
-  const handleAddLocationSubmit = (e: React.FormEvent) => {
+  const handleAddZone = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newLocName || !newLocSubCode) {
-      triggerToast("Missing Fields", "Please enter location name and code.");
+    if (!newZoneName || !newZoneCode) {
+      triggerToast("Missing Info", "Please provide zone name and code.");
       return;
     }
 
-    const newLoc: LocationItem = {
-      id: `loc-${Date.now()}`,
-      name: newLocName,
-      description: "User configured storage sector",
-      subCode: newLocSubCode.replace(/[^a-zA-Z0-9_-]/g, ""),
-      category: newLocCategory,
-      occupancy: Number(newLocOccupancy) || 0,
+    const newSec: SectorItem = {
+      id: `sec-${Date.now()}`,
+      code: newZoneCode.replace(/[^a-zA-Z0-9_-]/g, ""),
+      name: newZoneName,
+      category: newZoneCategory,
+      occupancy: Number(newZoneOccupancy) || 0,
+      occupancyStatus: newZoneOccupancy >= 80 ? "Critical" : newZoneOccupancy >= 50 ? "Nominal" : "Safe",
+      barColor: newZoneOccupancy >= 80 ? "bg-amber-600" : "bg-blue-600",
       status: "Online",
-      iconName: "shelves",
     };
 
-    setLocations((prev) => [...prev, newLoc]);
-    setIsAddLocationOpen(false);
-    setNewLocName("");
-    setNewLocSubCode("");
-    triggerToast(
-      "Location Created",
-      `Added ${shortCode}/${newLoc.subCode} to warehouse topology.`
-    );
+    setSectors((prev) => [...prev, newSec]);
+    setIsAddZoneOpen(false);
+    setNewZoneName("");
+    setNewZoneCode("");
+    triggerToast("Zone Added", `Created ${prefixCode}/${newSec.code} zone.`);
   };
-
-  const filteredLocations = locations.filter((loc) => {
-    if (filterMode === "high_occupancy") {
-      return loc.occupancy >= 70;
-    }
-    return true;
-  });
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-200 pb-20 md:pb-12">
       {/* ========================================================================= */}
-      {/* 1. TOP HEADER / APP BAR                                                    */}
+      {/* 1. TOP APP BAR                                                            */}
       {/* ========================================================================= */}
       <header className="sticky top-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-xs">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Brand Logo & Links */}
-          <div className="flex items-center gap-6 xl:gap-8">
+        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+          {/* Brand Logo & Context */}
+          <div className="flex items-center gap-2.5">
             <Link href="/" className="flex items-center gap-2.5">
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white shadow-xs">
                 <span className="material-symbols-outlined text-[20px]">
                   precision_manufacturing
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
-                  Nova Precision
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 tracking-wide border border-blue-200/50 dark:border-blue-800/40">
-                  Warehouse Ops
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">
+                    NOVA
+                  </span>
+                  <span className="text-[10px] font-mono font-bold tracking-wider px-1 py-0.2 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300">
+                    ALPHA
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 leading-none">
+                  WH-ALPHA-01
                 </span>
               </div>
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden xl:flex items-center gap-1.5">
+            <nav className="hidden xl:flex items-center gap-1 ml-6">
               <Link
                 href="/"
                 className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Dashboard
               </Link>
-              <div className="relative group">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors flex items-center gap-1"
-                >
-                  Operations
-                  <span className="material-symbols-outlined text-[16px]">
-                    expand_more
-                  </span>
-                </button>
-              </div>
+              <Link
+                href="/"
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+              >
+                Operations
+              </Link>
               <Link
                 href="/"
                 className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
@@ -251,39 +239,20 @@ export default function WarehouseSettingsPage() {
               <Link
                 href="/settings"
                 aria-current="page"
-                className="px-3 py-1.5 text-sm font-semibold transition-colors bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg flex items-center gap-1"
+                className="px-3 py-1.5 text-sm font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg flex items-center gap-1"
               >
                 Settings
-                <span className="material-symbols-outlined text-[16px]">
-                  expand_more
-                </span>
               </Link>
             </nav>
           </div>
 
           {/* Right Header Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Search SKU Bar */}
-            <div className="relative hidden md:flex items-center w-60 lg:w-72">
-              <span className="material-symbols-outlined absolute left-2.5 text-[18px] text-slate-400 pointer-events-none">
-                search
-              </span>
-              <input
-                placeholder="Search SKU / Reference..."
-                type="text"
-                className="w-full h-9 pl-9 pr-12 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700 transition-all"
-              />
-              <kbd className="absolute right-2 px-1.5 py-0.5 text-[11px] font-mono text-slate-400 bg-slate-200 dark:bg-slate-700 rounded shadow-xs">
-                ⌘K
-              </kbd>
-            </div>
-
+          <div className="flex items-center gap-2">
             {/* Notification Bell */}
             <button
               type="button"
-              onClick={() => triggerToast("Notifications", "All 18 zones running nominal.")}
+              onClick={() => triggerToast("System Alert", "Node WH-ALPHA-01 operating with 100% sync.")}
               className="relative p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Notifications"
             >
               <span className="material-symbols-outlined text-[20px]">
                 notifications
@@ -291,116 +260,63 @@ export default function WarehouseSettingsPage() {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-slate-900"></span>
             </button>
 
-            {/* Theme Toggle */}
+            {/* Dark/Light Toggle */}
             <button
               type="button"
               onClick={theme.toggleTheme}
               className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Toggle theme"
+              title="Toggle Theme"
             >
               {theme.darkMode ? (
-                <Sun className="w-5 h-5 text-amber-400" />
+                <Sun className="w-4 h-4 text-amber-400" />
               ) : (
-                <Moon className="w-5 h-5" />
+                <Moon className="w-4 h-4" />
               )}
             </button>
 
-            {/* User Profile */}
-            <div className="flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-800">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-mono text-sm font-semibold shadow-xs">
-                A
-              </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-sm font-semibold text-slate-900 dark:text-white leading-none">
-                  Alex M.
-                </span>
-                <span className="text-xs font-mono text-slate-500 dark:text-slate-400 leading-none mt-1">
-                  Warehouse Lead
-                </span>
-              </div>
+            {/* User Avatar Circle */}
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white font-mono text-xs sm:text-sm font-semibold flex items-center justify-center shadow-xs">
+              A
             </div>
-
-            {/* Mobile Menu Hamburger */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              {mobileMenuOpen ? <CloseIcon className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile Dropdown Nav */}
-        {mobileMenuOpen && (
-          <div className="xl:hidden px-4 pt-2 pb-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-in slide-in-from-top-2 duration-150">
-            <div className="flex flex-col gap-1">
-              <Link href="/" className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-                Dashboard
-              </Link>
-              <Link href="/" className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-                Stock Inventory
-              </Link>
-              <Link
-                href="/settings"
-                className="px-3 py-2 text-sm font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg"
-              >
-                Warehouse Configuration (Settings)
-              </Link>
-              <Link href="/" className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
-                Move History
-              </Link>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN PAGE CONTENT                                                      */}
+      {/* 2. MAIN CONTAINER                                                         */}
       {/* ========================================================================= */}
-      <main className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8 space-y-6">
-        {/* --------------------------------------------------------------------- */}
-        {/* Top Context & Action Bar                                              */}
-        {/* --------------------------------------------------------------------- */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-col space-y-1">
-            {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs font-mono text-slate-500 dark:text-slate-400">
-              <Link href="/settings" className="hover:text-blue-600 transition-colors">
-                Settings
-              </Link>
-              <span>/</span>
-              <span className="hover:text-blue-600 transition-colors cursor-pointer">
-                Warehouses
-              </span>
-              <span>/</span>
-              <span className="text-slate-900 dark:text-white font-semibold">
-                Nova Central Hub ({shortCode})
-              </span>
-            </nav>
+      <main className="w-full max-w-[1560px] mx-auto px-3.5 sm:px-6 lg:px-8 pt-3 sm:pt-6 space-y-3.5 sm:space-y-6">
+        {/* Breadcrumb & Status */}
+        <div className="flex items-center justify-between text-xs font-mono">
+          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+            <Link href="/settings" className="hover:text-blue-600">Settings</Link>
+            <span>/</span>
+            <span>Warehouses</span>
+            <span>/</span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">{prefixCode}</span>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Operational
+          </span>
+        </div>
 
-            {/* Title & Status Badge */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Warehouse Configuration
-              </h1>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Active / Operational
-              </span>
-            </div>
-
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              Manage warehouse facility specifications, routing prefixes, and linked operational storage zones.
+        {/* Title & Action Buttons Header */}
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Nova Central Hub
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Configuration &amp; Topology Core
             </p>
           </div>
 
-          {/* Action Buttons (Fully Responsive) */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 self-start md:self-auto">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleDiscard}
-              className="h-10 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               Discard
             </button>
@@ -408,671 +324,493 @@ export default function WarehouseSettingsPage() {
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-75"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1 shadow-xs transition-colors"
             >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsAddWarehouseOpen(true)}
-              className="h-10 px-3.5 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 text-xs sm:text-sm font-semibold transition-colors flex items-center gap-1 border border-blue-200/50 dark:border-blue-800/40"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Warehouse</span>
+              <Check className="w-3.5 h-3.5" />
+              <span>{isSaving ? "Saving..." : "Save"}</span>
             </button>
           </div>
         </div>
 
         {/* --------------------------------------------------------------------- */}
-        {/* Quick Vital Metrics Strip (4 Cards)                                   */}
+        {/* Vital Metrics Strip (2x2 Grid on Mobile, 4-col on Desktop)           */}
         {/* --------------------------------------------------------------------- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-          {/* Global Short Code */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-xs sm:text-sm font-medium">Global Short Code</span>
-              <QrCode className="w-5 h-5 text-blue-600" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Short Code */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-medium">Short Code</span>
+              <QrCode className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="mt-2 font-mono text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {shortCode.toUpperCase()}
-            </div>
-            <div className="mt-2 flex items-center gap-1.5 text-xs font-mono text-slate-500 dark:text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-              <span>Primary document prefix</span>
+            <div className="mt-1">
+              <div className="text-xl sm:text-2xl font-mono font-bold text-slate-900 dark:text-white">
+                {prefixCode}
+              </div>
+              <div className="mt-0.5 text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold">
+                Root Prefix (Active)
+              </div>
             </div>
           </div>
 
-          {/* Storage Utilization */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-xs sm:text-sm font-medium">Storage Utilization</span>
-              <Warehouse className="w-5 h-5 text-amber-600" />
+          {/* Utilization */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-medium">Utilization</span>
+              <span className="material-symbols-outlined text-amber-500 text-[18px]">
+                progress_activity
+              </span>
             </div>
-            <div className="mt-2 font-mono text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              84.2%
-            </div>
-            <div className="mt-2 space-y-1.5">
-              <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <div className="h-full bg-blue-600 rounded-full" style={{ width: "84.2%" }}></div>
+            <div className="mt-1">
+              <div className="text-xl sm:text-2xl font-mono font-bold text-slate-900 dark:text-white flex items-baseline gap-1">
+                84.2% <span className="text-xs font-normal text-slate-500">cap</span>
               </div>
-              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+              <div className="w-full h-1 rounded-full bg-slate-100 dark:bg-slate-800 mt-1.5 overflow-hidden">
+                <div className="h-full bg-amber-500 rounded-full" style={{ width: "84.2%" }}></div>
+              </div>
+              <div className="mt-1 text-[10px] font-mono text-slate-400">
                 2,520 / 3,000 Pallets
-              </span>
+              </div>
             </div>
           </div>
 
-          {/* Configured Locations */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-xs sm:text-sm font-medium">Configured Locations</span>
-              <MapPin className="w-5 h-5 text-emerald-600" />
+          {/* Locations */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-medium">Locations</span>
+              <GitBranch className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="mt-2 font-mono text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {locations.length} Zones
-            </div>
-            <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 w-fit">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>100% Synced</span>
+            <div className="mt-1">
+              <div className="text-xl sm:text-2xl font-mono font-bold text-slate-900 dark:text-white flex items-baseline gap-1">
+                18 <span className="text-xs font-normal text-slate-500">Zones</span>
+              </div>
+              <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <Check className="w-3 h-3" />
+                100% Synced
+              </div>
             </div>
           </div>
 
-          {/* Assigned Lead */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-              <span className="text-xs sm:text-sm font-medium">Assigned Lead</span>
-              <Badge className="w-5 h-5 text-slate-500" />
+          {/* Lead Custodian */}
+          <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-medium">Lead Custodian</span>
+              <User className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="mt-2 font-semibold text-lg sm:text-xl text-slate-900 dark:text-white truncate">
-              {manager.split(" ")[0]} {manager.split(" ")[1]}
-            </div>
-            <div className="mt-2 text-xs font-mono text-slate-500 dark:text-slate-400 truncate">
-              Shift Lead • Zone Master Access
+            <div className="mt-1">
+              <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                Alex Morgan
+              </div>
+              <div className="text-[10px] font-mono text-slate-500 truncate">
+                Zone Master Access
+              </div>
+              <div className="mt-0.5 flex items-center gap-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Shift Lead (On Duty)
+              </div>
             </div>
           </div>
         </div>
 
         {/* --------------------------------------------------------------------- */}
-        {/* Main Content Layout: Form & Architectural Hierarchy Diagram           */}
+        {/* Facility Parameters Card                                              */}
         {/* --------------------------------------------------------------------- */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-          {/* Primary Warehouse Form (Left Col - 7 cols) */}
-          <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-xl p-5 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600">
-                  <span className="material-symbols-outlined text-[20px]">
-                    settings_suggest
-                  </span>
-                </span>
-                <h2 className="font-bold text-lg text-slate-900 dark:text-white">
-                  Facility Attributes
-                </h2>
-              </div>
-              <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                Node Ref: WH-ALPHA-01
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+          <div className="p-3.5 sm:p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-blue-50 dark:bg-blue-950 text-blue-600">
+                <Package className="w-4 h-4" />
+              </span>
+              <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                Facility Parameters
               </span>
             </div>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold border border-slate-200 dark:border-slate-700">
+              Primary Hub
+            </span>
+          </div>
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-              {/* Warehouse Name */}
-              <div className="space-y-1">
-                <label className="block text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200" htmlFor="wh-name">
-                  Warehouse Name <span className="text-red-500">*</span>
-                </label>
+          <div className="p-3.5 sm:p-4 space-y-3">
+            {/* Facility Name */}
+            <div>
+              <span className="text-[10px] font-mono tracking-wider text-slate-500 uppercase block mb-1">
+                Facility Name
+              </span>
+              <div className="relative">
                 <input
-                  id="wh-name"
                   type="text"
-                  value={warehouseName}
-                  onChange={(e) => setWarehouseName(e.target.value)}
-                  placeholder="Enter warehouse name"
-                  className="w-full h-10 px-3.5 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700 shadow-xs"
+                  value={facilityName}
+                  onChange={(e) => setFacilityName(e.target.value)}
+                  className="w-full h-9 pl-3 pr-8 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-xs sm:text-sm font-semibold text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <p className="text-xs text-slate-500 font-mono mt-0.5">
-                  Publicly visible title for reports, purchase receipts, and delivery slips.
-                </p>
+                <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+            </div>
 
-              {/* Short Code Field with Highlight Annotation */}
-              <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-200" htmlFor="wh-code">
-                    Short Code (Prefix Identifier) <span className="text-red-500">*</span>
-                  </label>
-                  <span className="inline-flex items-center gap-1 text-xs font-mono text-blue-700 dark:text-blue-300 font-medium">
-                    <span className="material-symbols-outlined text-[16px]">link</span>
-                    Propagates to Child Locations
-                  </span>
-                </div>
-                <div className="relative max-w-xs">
-                  <input
-                    id="wh-code"
-                    type="text"
-                    maxLength={5}
-                    value={shortCode}
-                    onChange={(e) => setShortCode(e.target.value.toUpperCase())}
-                    className="w-full h-10 px-3.5 rounded-lg bg-white dark:bg-slate-800 uppercase font-mono text-base font-bold text-slate-900 dark:text-white tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 border border-blue-200 dark:border-blue-800 shadow-xs"
-                  />
-                </div>
-                <p className="text-xs text-blue-800 dark:text-blue-300 font-mono">
-                  Unique 2–5 letter code used system-wide in stock moves, pick-lists, and hierarchical barcode strings (e.g.{" "}
-                  <strong className="text-blue-950 dark:text-blue-100 font-bold">{shortCode}/STOCK1/BIN-04</strong>).
-                </p>
+            {/* Prefix Identifier */}
+            <div>
+              <span className="text-[10px] font-mono tracking-wider text-slate-500 uppercase block mb-1">
+                Prefix Identifier (Root)
+              </span>
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={5}
+                  value={prefixCode}
+                  onChange={(e) => setPrefixCode(e.target.value.toUpperCase())}
+                  className="w-full h-9 pl-3 pr-8 bg-slate-50 dark:bg-slate-800/80 rounded-lg font-mono text-sm font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase tracking-wider"
+                />
+                <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+              <p className="text-[11px] font-mono text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[13px]">info</span>
+                Propagates to child keys: <strong className="font-bold">{prefixCode}/STOCK1/BIN-04</strong>
+              </p>
+            </div>
 
-              {/* Physical Facility Address */}
-              <div className="space-y-1">
-                <label className="block text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200" htmlFor="wh-address">
-                  Physical Facility Address <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="wh-address"
-                  rows={3}
+            {/* Facility Address */}
+            <div>
+              <span className="text-[10px] font-mono tracking-wider text-slate-500 uppercase block mb-1">
+                Facility Address
+              </span>
+              <div className="relative">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
                   value={facilityAddress}
                   onChange={(e) => setFacilityAddress(e.target.value)}
-                  className="w-full p-3 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700 shadow-xs resize-none"
+                  className="w-full h-9 pl-8 pr-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-xs sm:text-sm text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <p className="text-xs text-slate-500 font-mono">
-                  Used for carrier dispatch documentation and automated tax zone jurisdiction.
-                </p>
+              </div>
+            </div>
+
+            {/* 2-column Operational Head & Duty Inflow Matrix */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <div>
+                <span className="text-[10px] font-mono tracking-wider text-slate-500 uppercase block mb-1">
+                  Operational Head
+                </span>
+                <select
+                  value={operationalHead}
+                  onChange={(e) => setOperationalHead(e.target.value)}
+                  className="w-full h-9 px-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option>Alex Morgan (Lead)</option>
+                  <option>Sara Jenkins (Supervisor)</option>
+                  <option>David Chen (Controller)</option>
+                </select>
               </div>
 
-              {/* Structured Secondary Meta Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div className="space-y-1">
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    Facility Operations Manager
-                  </label>
+              <div>
+                <span className="text-[10px] font-mono tracking-wider text-slate-500 uppercase block mb-1">
+                  Duty Inflow Matrix
+                </span>
+                <div className="relative">
                   <select
-                    value={manager}
-                    onChange={(e) => setManager(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700 shadow-xs"
-                  >
-                    <option>Alex Morgan (Lead Operator)</option>
-                    <option>Sara Jenkins (Shift Supervisor)</option>
-                    <option>David Chen (Inventory Controller)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    Operating Schedule
-                  </label>
-                  <select
-                    value={operatingSchedule}
-                    onChange={(e) => setOperatingSchedule(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700 shadow-xs"
+                    value={dutyMatrix}
+                    onChange={(e) => setDutyMatrix(e.target.value)}
+                    className="w-full h-9 pl-2.5 pr-8 bg-slate-50 dark:bg-slate-800/80 rounded-lg text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option>24/7 Continuous Inflow</option>
                     <option>Double Shift (06:00 - 22:00)</option>
                     <option>Single Shift (08:00 - 17:00)</option>
                   </select>
-                </div>
-              </div>
-
-              {/* Operational Switches */}
-              <div className="pt-2 space-y-2.5">
-                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
-                  <div className="flex flex-col pr-3">
-                    <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                      Enforce Lot / Serial Scanning at Intake
-                    </span>
-                    <span className="text-[11px] font-mono text-slate-500">
-                      Scanners will block receipt validation if batches are unassigned
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={enforceLotScanning}
-                    onChange={(e) => setEnforceLotScanning(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 hover:bg-slate-100 transition-colors cursor-pointer">
-                  <div className="flex flex-col pr-3">
-                    <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-                      Automated Cross-Dock Routing
-                    </span>
-                    <span className="text-[11px] font-mono text-slate-500">
-                      Bypass putaway directly to outbound staging for backorders
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={autoCrossDock}
-                    onChange={(e) => setAutoCrossDock(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                </label>
-              </div>
-            </form>
-          </div>
-
-          {/* Right Column: Visual Hierarchy & Location Mapping (5 cols) */}
-          <div className="lg:col-span-5 space-y-5">
-            {/* Architecture Linking Card: Warehouse Code to Locations */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-5 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-blue-600">
-                    account_tree
-                  </span>
-                  <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
-                    Hierarchy Topology
-                  </h3>
-                </div>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-semibold">
-                  Relational Scheme
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                The configured short code{" "}
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                  {shortCode}
-                </span>{" "}
-                serves as the root parent key for all internal zones, bays, and racks.
-              </p>
-
-              {/* Dotted Linking Diagram */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-4 relative overflow-hidden">
-                {/* Root Bubble */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-slate-900 shadow-xs border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-mono font-bold text-xs">
-                      {shortCode}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">
-                        {warehouseName || "Nova Central Hub"}
-                      </span>
-                      <span className="text-[11px] font-mono text-slate-500">
-                        Root Warehouse Node
-                      </span>
-                    </div>
-                  </div>
-                  <span className="material-symbols-outlined text-blue-600 text-[20px]">
-                    hub
-                  </span>
-                </div>
-
-                {/* Flow Vector */}
-                <div className="flex justify-center -my-2 relative z-10">
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-xs font-mono font-semibold shadow-xs border border-blue-200 dark:border-blue-800">
-                    <span className="material-symbols-outlined text-[16px] animate-bounce">
-                      arrow_downward
-                    </span>
-                    <span>Inherits prefix for storage keys</span>
-                  </div>
-                </div>
-
-                {/* Target Location Entity Display */}
-                <div className="p-3 rounded-lg bg-white dark:bg-slate-900 shadow-xs border border-slate-200 dark:border-slate-700 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-mono text-slate-500">
-                    <span>Location Schema Preview</span>
-                    <span className="text-blue-600 font-semibold">Auto-derived</span>
-                  </div>
-                  <div className="space-y-1.5 font-mono text-xs">
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-800">
-                      <span className="text-slate-900 dark:text-white font-bold">
-                        {shortCode} / Stock1
-                      </span>
-                      <span className="text-slate-500">Main Ground Bay</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-800">
-                      <span className="text-slate-900 dark:text-white font-bold">
-                        {shortCode} / Stock2
-                      </span>
-                      <span className="text-slate-500">Cross-dock Inflow</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-800">
-                      <span className="text-slate-900 dark:text-white font-bold">
-                        {shortCode} / ColdRoom
-                      </span>
-                      <span className="text-slate-500">Climate Storage</span>
-                    </div>
-                  </div>
+                  <Clock className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
             </div>
 
-            {/* Facility Geo / Map Spec Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 shadow-xs border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-amber-600">
-                    map
+            {/* Operational Toggles */}
+            <div className="pt-2 space-y-2 border-t border-slate-100 dark:border-slate-800">
+              <label className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                <div className="flex flex-col pr-2">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Enforce Lot / Serial Scanning
                   </span>
-                  Facility Satellite Pin
-                </span>
-                <span className="text-xs font-mono text-slate-500">Sector 62 Node</span>
-              </div>
-              <div
-                className="w-full h-44 rounded-xl bg-cover bg-center shadow-inner relative flex items-end p-3 overflow-hidden border border-slate-200 dark:border-slate-700"
-                style={{
-                  backgroundImage:
-                    "url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80')",
-                }}
-              >
-                <div className="w-full p-2.5 rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-md flex items-center justify-between shadow-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-blue-600 text-[18px]">
-                      share_location
-                    </span>
-                    <span className="font-mono text-xs text-slate-900 dark:text-white font-medium">
-                      12.9716° N, 77.5946° E
-                    </span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-semibold">
-                    Gate 4-B Active
+                  <span className="text-[10px] font-mono text-slate-500">
+                    Mandate 2D barcode check at inbound dock intake
                   </span>
                 </div>
+                <input
+                  type="checkbox"
+                  checked={enforceLotScanning}
+                  onChange={(e) => setEnforceLotScanning(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                <div className="flex flex-col pr-2">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Automated Cross-Dock Routing
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">
+                    Bypass buffer storage for prioritized back-to-back manifests
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoCrossDock}
+                  onChange={(e) => setAutoCrossDock(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* --------------------------------------------------------------------- */}
+        {/* Topology & Geo Anchor Card                                            */}
+        {/* --------------------------------------------------------------------- */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+          <div className="p-3.5 sm:p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-blue-50 dark:bg-blue-950 text-blue-600">
+                <span className="material-symbols-outlined text-[18px]">account_tree</span>
+              </span>
+              <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                Topology &amp; Geo Anchor
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-semibold border border-blue-200/50">
+              Level 0 Root
+            </span>
+          </div>
+
+          <div className="p-3.5 sm:p-4 space-y-3">
+            {/* Relational Chips */}
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-slate-800 dark:text-slate-200">
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                <span>Nova Central Hub ({prefixCode}) → Inherits root storage keys</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {sectors.slice(0, 3).map((sec) => (
+                  <span
+                    key={sec.id}
+                    className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-mono font-semibold"
+                  >
+                    {prefixCode} / {sec.code}
+                  </span>
+                ))}
+                <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-mono">
+                  +15 sub-bins
+                </span>
+              </div>
+            </div>
+
+            {/* Panoramic Map View */}
+            <div
+              className="w-full h-36 sm:h-44 rounded-xl bg-cover bg-center relative flex items-end p-2 sm:p-3 overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner"
+              style={{
+                backgroundImage:
+                  "url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80')",
+              }}
+            >
+              <div className="w-full p-2 rounded-lg bg-slate-900/85 backdrop-blur-md flex items-center justify-between text-white text-xs font-mono">
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                  <span>12.9716° N, 77.5946° E</span>
+                </div>
+                <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Gate 4-B Active
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* --------------------------------------------------------------------- */}
-        {/* Connected Locations & Zones Panel (Bottom Panel)                      */}
+        {/* Configured Sectors (Mobile Cards List)                                */}
         {/* --------------------------------------------------------------------- */}
-        <div className="w-full bg-white dark:bg-slate-900 rounded-xl p-5 sm:p-6 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-bold text-lg text-slate-900 dark:text-white">
-                  Configured Locations &amp; Zones for {shortCode}
-                </h2>
-                <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono text-xs font-semibold">
-                  {locations.length} Primary Sectors
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Internal physical and virtual locations routing through the{" "}
-                <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  {shortCode}
-                </span>{" "}
-                root identifier.
+              <h2 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                Configured Sectors
+              </h2>
+              <p className="text-[11px] font-mono text-slate-500">
+                {sectors.length} Active Primary Sectors
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = filterMode === "all" ? "high_occupancy" : "all";
-                  setFilterMode(next);
-                  triggerToast(
-                    "Filter Changed",
-                    next === "high_occupancy" ? "Showing occupancy ≥ 70%" : "Showing all zones"
-                  );
-                }}
-                className={`h-9 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border ${
-                  filterMode !== "all"
-                    ? "bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300"
-                    : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700"
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                <span>{filterMode === "all" ? "Filter" : "Occupancy ≥ 70%"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsAddLocationOpen(true)}
-                className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1 shadow-xs transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  add_location_alt
-                </span>
-                <span>+ Add Location to {shortCode}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddZoneOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-100 text-xs font-mono font-bold flex items-center gap-1 border border-blue-200/50"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Zone</span>
+            </button>
           </div>
 
-          {/* Desktop Table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-mono text-xs uppercase tracking-wider h-11 border-b border-slate-200 dark:border-slate-700">
-                  <th className="py-2.5 px-4 font-semibold">Location Name</th>
-                  <th className="py-2.5 px-4 font-semibold">Short Code</th>
-                  <th className="py-2.5 px-4 font-semibold">Parent Warehouse</th>
-                  <th className="py-2.5 px-4 font-semibold">Category Type</th>
-                  <th className="py-2.5 px-4 font-semibold">Current Occupancy</th>
-                  <th className="py-2.5 px-4 font-semibold">Status</th>
-                  <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
-                {filteredLocations.map((loc) => (
-                  <tr key={loc.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-medium text-slate-900 dark:text-white">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[18px]">
-                            {loc.iconName}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white">
-                            {loc.name}
-                          </div>
-                          <div className="text-xs font-mono text-slate-500">
-                            {loc.description}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700">
-                        {shortCode}/{loc.subCode}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 text-blue-600 font-mono text-xs font-semibold">
-                        <Warehouse className="w-4 h-4" />
-                        {shortCode}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-xs font-mono text-slate-500">
-                      {loc.category}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-semibold text-xs text-slate-900 dark:text-white w-8">
-                          {loc.occupancy}%
-                        </span>
-                        <div className="w-16 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              loc.occupancy >= 80 ? "bg-red-500" : "bg-blue-600"
-                            }`}
-                            style={{ width: `${loc.occupancy}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        {loc.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => triggerToast("Location Options", `Managing ${shortCode}/${loc.subCode}`)}
-                        className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Card List (< 768px) */}
-          <div className="block md:hidden divide-y divide-slate-200 dark:divide-slate-800">
-            {filteredLocations.map((loc) => (
-              <div key={loc.id} className="py-3.5 space-y-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-bold text-sm text-slate-900 dark:text-white block">
-                      {loc.name}
+          <div className="space-y-2.5">
+            {sectors.map((sec) => (
+              <div
+                key={sec.id}
+                className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2.5 hover:border-blue-300 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono text-xs font-bold border border-blue-200/60 dark:border-blue-800/40">
+                      {prefixCode}/{sec.code}
                     </span>
-                    <span className="font-mono text-xs text-slate-500 block">
-                      {loc.description}
+                    <span className="text-xs font-mono text-slate-500 truncate">
+                      {sec.category}
                     </span>
                   </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    {loc.status}
-                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => triggerToast("Sector Details", `Viewing telemetry for ${prefixCode}/${sec.code}`)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0"
+                  >
+                    <span>{sec.status}</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-mono pt-1">
-                  <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-slate-700">
-                    {shortCode}/{loc.subCode}
-                  </span>
-                  <span className="text-slate-500">{loc.category}</span>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                    {sec.name}
+                  </h3>
                 </div>
 
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
-                    Occupancy: {loc.occupancy}%
-                  </span>
-                  <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${
-                        loc.occupancy >= 80 ? "bg-red-500" : "bg-blue-600"
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-slate-500">Occupancy Level</span>
+                    <span
+                      className={`font-bold ${
+                        sec.occupancyStatus === "Critical"
+                          ? "text-amber-600 dark:text-amber-400"
+                          : sec.occupancyStatus === "Safe"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-slate-900 dark:text-white"
                       }`}
-                      style={{ width: `${loc.occupancy}%` }}
+                    >
+                      {sec.occupancy}% ({sec.occupancyStatus})
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${sec.barColor}`}
+                      style={{ width: `${sec.occupancy}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Helper Note Banner */}
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs font-mono text-slate-600 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700">
-            <Info className="w-4 h-4 text-blue-600 shrink-0" />
-            <span>
-              Wireframe Hierarchy Protocol: Changes to warehouse prefix{" "}
-              <strong className="text-slate-900 dark:text-white font-bold">{shortCode}</strong>{" "}
-              will cascade updates to child room codes and document reference rules.
-            </span>
-          </div>
+        {/* Wireframe Protocol Callout Note */}
+        <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-start gap-2 text-xs font-mono text-slate-500 dark:text-slate-400">
+          <Shield className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <span>
+            Wireframe Protocol: Changes to warehouse prefix{" "}
+            <strong className="text-slate-900 dark:text-white font-bold">{prefixCode}</strong>{" "}
+            cascade automatically to child bins, pallet routing rules, and EDI document schemas.
+          </span>
         </div>
       </main>
 
       {/* ========================================================================= */}
-      {/* 3. ADD LOCATION MODAL                                                     */}
+      {/* 3. ADD ZONE MODAL                                                         */}
       {/* ========================================================================= */}
-      {isAddLocationOpen && (
+      {isAddZoneOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 font-bold text-base text-slate-900 dark:text-white">
-                <span className="material-symbols-outlined text-blue-600 text-[20px]">
-                  add_location_alt
-                </span>
-                <span>Add Storage Zone to {shortCode}</span>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150 p-4 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-1.5 font-bold text-sm text-slate-900 dark:text-white">
+                <Plus className="w-4 h-4 text-blue-600" />
+                <span>Add Storage Sector to {prefixCode}</span>
               </div>
               <button
                 type="button"
-                onClick={() => setIsAddLocationOpen(false)}
+                onClick={() => setIsAddZoneOpen(false)}
                 className="text-slate-400 hover:text-slate-600"
               >
-                <CloseIcon className="w-5 h-5" />
+                <CloseIcon className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddLocationSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleAddZone} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Location Zone Name <span className="text-red-500">*</span>
+                  Sector Name
                 </label>
                 <input
                   type="text"
                   required
-                  value={newLocName}
-                  onChange={(e) => setNewLocName(e.target.value)}
-                  placeholder="e.g. Rack Sector C Mezzanine"
-                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700"
+                  value={newZoneName}
+                  onChange={(e) => setNewZoneName(e.target.value)}
+                  placeholder="e.g. Mezzanine Aisle 4"
+                  className="w-full h-9 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Sub-Code Identifier (Suffix) <span className="text-red-500">*</span>
+                  Sub-Code Key
                 </label>
                 <div className="flex items-center">
-                  <span className="h-10 px-3 flex items-center justify-center font-mono font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-r-0 border-slate-200 dark:border-slate-700 rounded-l-lg">
-                    {shortCode}/
+                  <span className="h-9 px-2.5 flex items-center font-mono font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 border border-r-0 border-slate-200 dark:border-slate-700 rounded-l-lg">
+                    {prefixCode}/
                   </span>
                   <input
                     type="text"
                     required
-                    value={newLocSubCode}
-                    onChange={(e) => setNewLocSubCode(e.target.value)}
-                    placeholder="Rack-C"
-                    className="flex-1 h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-r-lg font-mono text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-200 dark:border-slate-700"
+                    value={newZoneCode}
+                    onChange={(e) => setNewZoneCode(e.target.value)}
+                    placeholder="Rack-B"
+                    className="flex-1 h-9 px-2.5 bg-slate-50 dark:bg-slate-800 rounded-r-lg font-mono text-xs font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Category Type
+                    Category
                   </label>
                   <select
-                    value={newLocCategory}
-                    onChange={(e) => setNewLocCategory(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-medium text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
+                    value={newZoneCategory}
+                    onChange={(e) => setNewZoneCategory(e.target.value)}
+                    className="w-full h-9 px-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
                   >
                     <option>Internal Storage</option>
                     <option>Dock Buffer</option>
-                    <option>High Density Vertical</option>
                     <option>Cold Storage</option>
-                    <option>Quarantine Inspection</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Initial Occupancy (%)
+                    Occupancy (%)
                   </label>
                   <input
                     type="number"
                     min="0"
                     max="100"
-                    value={newLocOccupancy}
-                    onChange={(e) => setNewLocOccupancy(Number(e.target.value))}
-                    className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm font-mono text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
+                    value={newZoneOccupancy}
+                    onChange={(e) => setNewZoneOccupancy(Number(e.target.value))}
+                    className="w-full h-9 px-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-mono text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
                   />
                 </div>
-              </div>
-
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-xs font-mono text-blue-900 dark:text-blue-200">
-                Derived key: <strong className="font-bold">{shortCode}/{newLocSubCode || "..."}</strong>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsAddLocationOpen(false)}
-                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                  onClick={() => setIsAddZoneOpen(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold"
                 >
-                  Create Location
+                  Save Sector
                 </button>
               </div>
             </form>
@@ -1081,94 +819,26 @@ export default function WarehouseSettingsPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 4. ADD WAREHOUSE MODAL                                                     */}
-      {/* ========================================================================= */}
-      {isAddWarehouseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150 p-5 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 font-bold text-base text-slate-900 dark:text-white">
-                <Warehouse className="w-5 h-5 text-blue-600" />
-                <span>Create New Warehouse Node</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddWarehouseOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <CloseIcon className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Warehouse Facility Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. West Coast Fulfillment Center"
-                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Global Prefix (2-5 letters)
-                </label>
-                <input
-                  type="text"
-                  maxLength={5}
-                  placeholder="e.g. WC"
-                  className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 rounded-lg font-mono text-sm uppercase text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setIsAddWarehouseOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-slate-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddWarehouseOpen(false);
-                  triggerToast("Warehouse Registered", "New facility node provisioned.");
-                }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold"
-              >
-                Save Warehouse
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 5. FLOATING NOTIFICATION TOAST                                            */}
+      {/* 4. NOTIFICATION TOAST                                                     */}
       {/* ========================================================================= */}
       <div
-        className={`fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 border border-slate-700 ${
+        className={`fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2.5 transform transition-all duration-300 border border-slate-700 ${
           toast.visible
             ? "translate-y-0 opacity-100 scale-100"
             : "translate-y-8 opacity-0 scale-95 pointer-events-none"
         }`}
       >
-        <span className="material-symbols-outlined text-emerald-400 text-[22px]">
+        <span className="material-symbols-outlined text-emerald-400 text-[20px]">
           check_circle
         </span>
         <div className="flex flex-col">
-          <span className="text-xs sm:text-sm font-semibold">{toast.title}</span>
+          <span className="text-xs font-bold">{toast.title}</span>
           <span className="text-[11px] font-mono text-slate-300">{toast.message}</span>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 6. MOBILE FIXED BOTTOM NAVIGATION BAR                                     */}
+      {/* 5. MOBILE FIXED BOTTOM NAVIGATION BAR                                     */}
       {/* ========================================================================= */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 py-1.5 px-4 flex items-center justify-around shadow-lg">
         <Link
@@ -1211,33 +881,6 @@ export default function WarehouseSettingsPage() {
           <span>Settings</span>
         </Link>
       </nav>
-
-      {/* ========================================================================= */}
-      {/* 7. DESKTOP SYSTEM FOOTER                                                  */}
-      {/* ========================================================================= */}
-      <footer className="hidden md:block fixed bottom-0 left-0 right-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs border-t border-slate-200 dark:border-slate-800 py-2 z-30 transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs font-mono text-slate-500">
-          <div>
-            Nova Precision ERP Suite • Node ID:{" "}
-            <span className="text-slate-900 dark:text-white font-semibold">WH-ALPHA-01</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              RF Scanners Online
-            </span>
-            <span>
-              Sync Latency: <span className="text-slate-900 dark:text-white font-semibold">14ms</span>
-            </span>
-            <span>
-              Active Zone:{" "}
-              <span className="text-slate-900 dark:text-white font-semibold">
-                Rack Sector B
-              </span>
-            </span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
