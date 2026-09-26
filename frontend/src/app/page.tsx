@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useTheme } from "@/components/theme-provider";
 import {
   Sun,
@@ -422,12 +423,15 @@ export default function StockInventoryPage() {
               >
                 Move History
               </a>
-              <a
-                href="#"
-                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+              <Link
+                href="/settings"
+                className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors flex items-center gap-1"
               >
                 Settings
-              </a>
+                <span className="material-symbols-outlined text-[16px]">
+                  expand_more
+                </span>
+              </Link>
             </nav>
           </div>
 
@@ -970,21 +974,13 @@ export default function StockInventoryPage() {
           <span>History</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setActiveNavTab("settings");
-            triggerToast("Opening Warehouse Settings", "settings");
-          }}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
-            activeNavTab === "settings"
-              ? "text-blue-600 font-semibold"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-900"
-          }`}
+        <Link
+          href="/settings"
+          className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 transition-colors"
         >
           <Settings className="w-5 h-5" />
           <span>Settings</span>
-        </button>
+        </Link>
       </nav>
 
       {/* ========================================================================= */}
