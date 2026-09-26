@@ -78,6 +78,7 @@ class UserResponse(CamelModel):
 
 class AuthResponse(CamelModel):
     user: UserResponse
+    token: str | None = None
 
 
 # ---------------------------------------------------------------------------
