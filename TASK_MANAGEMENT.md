@@ -9,26 +9,34 @@
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-- **Auth page built at `/`**: Sign-in / sign-up form with Login ID (6–12 chars), email, password complexity rules, error notice, theme toggle, responsive layout. **Not yet wired to a real backend** — it only shows toasts and local state.
+- **Auth page built at** `/`: Sign-in / sign-up form with Login ID (6–12 chars), email, password complexity rules, error notice, theme toggle, responsive layout. **Not yet wired to a real backend** — it only shows toasts and local state.
 - **No backend folder exists yet**: Kunal needs to scaffold FastAPI/Postgres/backend core immediately.
-- **No `docs/API_CONTRACT.md` exists yet**: contract is only inside `v2blueprint.md`.
+- **No** `docs/API_CONTRACT.md` **exists yet**: contract is only inside `v2blueprint.md`.
 - **Hardik has a WIP design branch** (`origin/feat/design-hardik`) with a stock-inventory page replacing the auth page; not merged to `main`.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
 ---
 
+
+
 ## Team Roster
 
-| Member | Primary lane | Must not do |
-|---|---|---|
-| **Sourabh** | React/Next.js pages, routing, API integration, demo click-path, responsive layouts | Backend logic, database models, deployment |
-| **Kunal** | Python API, business logic, auth, database schema/migrations, seed data, deployment | UI components, frontend pages, visual QA |
-| **Hardik** | Shared UI kit, loading/empty/error states, component quality, QA/bug bash, demo testing/video | Backend endpoints, DB design, infra provisioning |
+
+| Member      | Primary lane                                                                                  | Must not do                                      |
+| ----------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Sourabh** | React/Next.js pages, routing, API integration, demo click-path, responsive layouts            | Backend logic, database models, deployment       |
+| **Kunal**   | Python API, business logic, auth, database schema/migrations, seed data, deployment           | UI components, frontend pages, visual QA         |
+| **Hardik**  | Shared UI kit, loading/empty/error states, component quality, QA/bug bash, demo testing/video | Backend endpoints, DB design, infra provisioning |
+
 
 ---
 
+
+
 ## Sourabh — Frontend Lead / Pages
+
+
 
 ### Completed ✅
 
@@ -36,6 +44,8 @@
   - *Test:* `cd frontend && npm install && npm run dev` boots in < 30 s.
 - [x] **SOUR-002 · Auth UI page** — build sign-in / sign-up page at `/` with Login ID, email, password complexity rules, error notice, theme toggle, responsive layout
   - *Test:* Form validates on client; error notice shows "Invalid Login Id or Password"; mobile and desktop layouts render.
+
+
 
 ### In Progress 🔄
 
@@ -45,6 +55,8 @@
 - [-] **SOUR-004 · Wire auth page to real API** — replace local toasts with calls to `/auth/login`, `/auth/signup`, `/auth/me`, `/auth/logout`
   - *Test:* Sign in with demo credentials navigates to `/dashboard`; 401 redirects to `/login`.
   - *Blocked on:* Kunal's auth endpoints (KUN-006–KUN-008).
+
+
 
 ### Todo 📋
 
@@ -76,31 +88,41 @@
 
 ---
 
+
+
 ## Kunal — Backend / Auth / Database / Infra
+
+
 
 ### Completed ✅
 
 - [x] **KUN-001 · Stack decision** — locked Next.js frontend + FastAPI backend + PostgreSQL database per `v2blueprint.md`
 - [x] **KUN-002 · Problem analysis** — re-read problem statement, flagged constraints and risky assumptions (Odoo-native vs standalone)
 
+
+
 ### In Progress 🔄
 
-_None — backend work has not started. KUN-003 should move to In Progress immediately._
+*None — backend work has not started. KUN-003 should move to In Progress immediately.*
 
 ### Todo 📋
 
+
+
 #### Must start now (next 60 minutes)
 
-- [ ] **KUN-003 · Create `feature/kunal/backend-core` branch**
+- [ ] **KUN-003 · Create** `feature/kunal/backend-core` **branch**
   - *Test:* Branch pushed to origin; PR opened from `main` later.
 - [ ] **KUN-004 · Scaffold FastAPI project** — `backend/` folder with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/`
   - *Test:* `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload` starts without errors.
 - [ ] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 base, migrations, `DATABASE_URL` from env
   - *Test:* `alembic upgrade head` runs against a fresh Postgres DB; `SELECT 1` from app returns 1.
-- [ ] **KUN-006 · Create `.env.example`** — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
+- [ ] **KUN-006 · Create** `.env.example` — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
   - *Test:* No real secrets in repo; teammates can copy to `.env` and run locally.
-- [ ] **KUN-007 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
+- [ ] **KUN-007 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
   - *Test:* File exists and covers every P0 endpoint with method, path, auth, request, response, errors.
+
+
 
 #### Auth endpoints
 
@@ -111,6 +133,8 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 - [ ] **KUN-010 · Password hashing + JWT/session cookies** — bcrypt/Argon2, HttpOnly cookie, `SameSite=Lax`
   - *Test:* Hashed password never returned; cookie set on login, cleared on logout.
 
+
+
 #### Reference data endpoints
 
 - [ ] **KUN-011 · Categories endpoint** — `GET /categories` (P1 create)
@@ -120,12 +144,16 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 - [ ] **KUN-013 · Partners endpoint** — `GET /partners?kind=&search=`
   - *Test:* Returns supplier/customer choices for operation forms.
 
+
+
 #### Products + balances
 
 - [ ] **KUN-014 · Products CRUD** — `GET /products`, `POST /products`, `GET /products/{id}`, `PATCH /products/{id}`, `GET /products/{id}/availability`
   - *Test:* Duplicate SKU returns 409; optional initial stock creates adjustment + ledger row.
 - [ ] **KUN-015 · StockBalance model + free-to-use calculation** — unique `(product_id, location_id)`, `on_hand_quantity >= 0`
   - *Test:* Free-to-use = on_hand − reserved by waiting/ready deliveries for same product/location.
+
+
 
 #### Operations + ledger
 
@@ -140,6 +168,8 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 - [ ] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` with receipt/delivery summaries, low stock, recent operations
   - *Test:* KPIs match underlying lists; isLate computed correctly.
 
+
+
 #### Seed + deploy
 
 - [ ] **KUN-021 · Deterministic seed script** — demo users Maya/Arjun, warehouses/locations, products with starting balances, one waiting delivery
@@ -151,7 +181,11 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 
 ---
 
+
+
 ## Hardik — UI Kit / QA / Testing
+
+
 
 ### Completed ✅
 
@@ -163,6 +197,8 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 - [x] **HAR-004 · Theme + responsive foundation** — dark/light mode toggle; responsive breakpoints active
   - *Test:* Toggle theme in auth page; resize window to 390px and 1440px.
 
+
+
 ### In Progress 🔄
 
 - [-] **HAR-005 · Stock inventory design branch** — `origin/feat/design-hardik` has a stock-inventory page replacing the auth page; needs reconciliation with `main`
@@ -171,6 +207,8 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 - [-] **HAR-006 · Wire UI kit into Sourabh's pages** — replace ad-hoc markup in auth page and future pages with kit components
   - *Test:* `frontend/src/app/page.tsx` uses `Button`, `Input`, `Card` from kit instead of raw `<button>`/`<input>`.
   - *Blocked on:* Sourabh's route shells (SOUR-003).
+
+
 
 ### Todo 📋
 
@@ -194,18 +232,24 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 
 ---
 
+
+
 ## Shared / Cross-Cutting
+
+
 
 ### Done ✅
 
 - [x] **SHR-001 · Problem selected: StockSense**
-- [x] **SHR-002 · `v2blueprint.md` created** with full P0/P1/P2 scope, domain model, API contract, architecture, seed scenario
+- [x] **SHR-002 ·** `v2blueprint.md` **created** with full P0/P1/P2 scope, domain model, API contract, architecture, seed scenario
 - [x] **SHR-003 · Frontend project scaffolded and running**
 - [x] **SHR-004 · Git repo initialized with origin remote**
 
+
+
 ### Todo 📋
 
-- [ ] **SHR-005 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
+- [ ] **SHR-005 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
   - *Owner:* Kunal or Sourabh
   - *Test:* Single source-of-truth contract file exists.
 - [ ] **SHR-006 · Create shared scratch doc** for Idea Document sections 1–11
@@ -224,6 +268,8 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
   - Video uploaded/linked, deployed link tested incognito
 
 ---
+
+
 
 ## P0 Feature Dependency Chain
 
@@ -247,17 +293,19 @@ _None — backend work has not started. KUN-003 should move to In Progress immed
 
 ---
 
+
+
 ## Active Blockers
 
 1. **No backend exists** — Kunal must start `feature/kunal/backend-core` (KUN-003) immediately.
-2. **No `docs/API_CONTRACT.md`** — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
+2. **No** `docs/API_CONTRACT.md` — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
 3. **Auth page not wired to API** — waiting on Kunal's auth endpoints (KUN-008–KUN-010).
 4. **Hardik's design branch not reconciled** — decide whether the stock-inventory page replaces `/` or becomes `/stock`/`/products` (HAR-005).
 
 ---
 
-_Last updated: Saturday, Sep 26, 2026, 10:45 AM_  
-_Next actions:_
-_1. Kunal: start KUN-003 and scaffold FastAPI + PostgreSQL + Alembic + auth endpoints._
-_2. Sourabh: start SOUR-003 and add P0 route shells._
-_3. Anyone with 5 minutes: complete KUN-007 / SHR-005 and extract `docs/API_CONTRACT.md`._
+*Last updated: Saturday, Sep 26, 2026, 10:45 AM*  
+*Next actions:*
+*1. Kunal: start KUN-003 and scaffold FastAPI + PostgreSQL + Alembic + auth endpoints.*
+*2. Sourabh: start SOUR-003 and add P0 route shells.*
+*3. Anyone with 5 minutes: complete KUN-007 / SHR-005 and extract* `docs/API_CONTRACT.md`*.*
