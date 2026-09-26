@@ -103,13 +103,13 @@
 
 | # | Task | Est. | Can start now? | Depends on |
 | --- | --- | --- | --- | --- |
-| 1 | **Finish SOUR-003 gaps** — add 6 operation sub-routes (`receipts/deliveries/adjustments` × `new` + `[id]`), redirect `/` → `/login`, fix or remove `/stock` nav | 30 min | ✅ Yes | — |
-| 2 | **Move location UI** — relocate `/` warehouse page → `/settings/locations/[id]`; keep demo id in URL for now | 15 min | ✅ Yes | — |
+| 1 | **Finish SOUR-003 gaps** — add 6 operation sub-routes, redirect `/` → `/login`, and provide `/stock` | Done | ✅ | — |
+| 2 | **Move location UI** — relocate warehouse detail to `/settings/locations/[id]` | Done | ✅ | — |
 | 3 | **SOUR-014 auth guard** — middleware or layout check; redirect unauthenticated users | 20 min | ✅ Yes (cookie check stub OK until backend) | KUN-009 for real session |
 | 4 | **SOUR-004 wire login** — `POST /auth/login`, `POST /auth/signup`, store session, redirect to `/dashboard` | 30 min | ⏳ When backend up | KUN-008–KUN-010 |
-| 5 | **SOUR-015 kit-ify auth** — swap raw HTML inputs for Hardik's `Button`/`Input`/`Card` | 20 min | ✅ Yes | — |
-| 6 | **Operation detail scaffolds** — receipt/delivery/adjustment detail pages with status badges, line table, action buttons (Ready / Validate / Cancel) using mock state | 45 min | ✅ Yes | — |
-| 7 | **Products list upgrade** — replace `ScaffoldTable` with `DataTable` + search input + "New product" link | 30 min | ✅ Yes | — |
+| 5 | **SOUR-015 kit-ify auth** — use shared `Button`/`Input`/`Card`/`Label` controls | Done | ✅ | — |
+| 6 | **Operation detail scaffolds** — create/detail screens, line table, under-stock warning, demo-local actions | Done | ✅ | — |
+| 7 | **Products list upgrade** — add local search and "New product" link | Done | ✅ | — |
 | 8 | **Wire dashboard live** — flip off demo fallback once `GET /dashboard` returns 200 | 10 min | ⏳ When backend up | KUN-020 |
 | 9 | **Wire products/operations/moves** — TanStack Query hooks per page | 2–3 hr | ⏳ When backend up | KUN-014–KUN-019 |
 | 10 | **SOUR-012 responsive pass** — 390px + 1440px on every route; fix table overflow | 30 min | After step 1 | — |
@@ -327,14 +327,10 @@
 1. **No backend exists** — Kunal must start `feature/kunal/backend-core` (KUN-003) immediately. Blocks SOUR-004 and all live API wiring.
 2. **No** `docs/API_CONTRACT.md` — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
 3. **Auth page not wired to API** — waiting on Kunal's auth endpoints (KUN-008–KUN-010). UI + `apiFetch` client are ready.
-4. **Route gaps** — 6 operation sub-routes missing; `/stock` 404; `/` still serves location UI instead of redirect (SOUR-003 finish).
+4. **Backend is absent from this checkout** — live auth, products, operations, settings, ledger, and dashboard data need Kunal's API endpoints.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026, 11:25 AM*  
-*Sourabh next actions (do now, no backend needed):*
-*1. Finish SOUR-003 — operation `new`/`[id]` routes, `/` redirect, fix `/stock` nav.*
-*2. Move location UI from `/` → `/settings/locations/[id]`.*
-*3. SOUR-015 — kit-ify `/login` with Hardik's components.*
-*4. Build operation detail scaffolds with Ready/Validate/Cancel buttons (mock state).*
-*When Kunal's auth lands (~11:00 checkpoint): SOUR-004 wire login → `/dashboard`.*
+*Last updated: Saturday, Sep 26, 2026 (frontend route and scaffold follow-up)*
+*Completed: SOUR-003 route gaps, location detail route, SOUR-015 auth component kit, operation create/detail scaffolds, and local product search.*
+*Next available work is API integration after the backend endpoints land.*
