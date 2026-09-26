@@ -17,8 +17,9 @@ $$\text{Login} \longrightarrow \text{Dashboard} \longrightarrow \text{Receipt (I
 1. **Navigate to**: `http://localhost:3000/`
    - *Expected Behavior*: Automatic 307 redirect to `/login` due to auth session guard.
 2. **Action**:
-   - Enter Login ID: `maya`
-   - Enter Password: `StaffPass123!`
+
+    Login ID: mayasharma
+ Password: StockSense@123
    - Click **Sign In**.
 3. **Verification**:
    - Authentication cookie (`stock_session`) is set as `HttpOnly; SameSite=Lax`.
