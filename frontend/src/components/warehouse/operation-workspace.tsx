@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Edit2, Save } from "lucide-react";
-import { stockApi, type Operation } from "@/lib/stock-api";
+import { ArrowLeft, Check, Edit2, Printer, Save, Trash2 } from "lucide-react";
+import { stockApi, type Operation, type Product } from "@/lib/stock-api";
 import { ApiError } from "@/lib/api";
 import { showCreateSuccessToast, showUpdateSuccessToast, showErrorToast } from "@/lib/toast-utils";
 import { Button } from "@/components/ui/button";
@@ -114,6 +114,7 @@ function NewOperationWorkspace({
   const [destinationLocationId, setDestinationLocationId] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [quantity, setQuantity] = useState(defaultCount);
+  const [receiptLines, setReceiptLines] = useState([{ productId: defaultProductId, quantity: defaultCount }]);
   const [reason, setReason] = useState("");
   const [scheduleDateTime, setScheduleDateTime] = useState(() => {
     const d = new Date();
@@ -130,7 +131,7 @@ function NewOperationWorkspace({
         sourceLocationId: isTransfer ? locationId : type === "delivery" || type === "adjustment" ? locationId : null,
         destinationLocationId: isTransfer ? destinationLocationId : type === "receipt" ? locationId : null,
         scheduleDate: type === "adjustment" ? null : scheduleDateTime ? new Date(scheduleDateTime).toISOString() : null,
-        lines: [{
+        lines: type === "receipt" ? receiptLines : [{
           productId,
           quantity: type === "adjustment" ? "0" : quantity,
           ...(type === "adjustment" ? { countedQuantity: quantity, reason } : {}),
@@ -171,11 +172,11 @@ function NewOperationWorkspace({
       title={`New ${label.toLowerCase()}`}
       description={`Create and schedule a ${label.toLowerCase()} with date & time.`}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {type !== "receipt" && <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href={kind === "transfers" ? "/moves" : `/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> {kind === "transfers" ? "Back to move history" : `Back to ${kind}`}
         </Link>
-      </div>
+      </div>}
       {isLoading ? (
         <div className="py-2"><SkeletonForm /></div>
       ) : loadError ? (
@@ -266,7 +267,7 @@ function NewOperationWorkspace({
           </RoutePanel>
           <div className="mt-5">
             <RoutePanel title="Product lines" description={type === "adjustment" ? "Enter the counted quantity; the server calculates the delta when validated." : "Quantities are validated against stock availability by the server."}>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {type === "receipt" ? <ReceiptLineEditor lines={receiptLines} onChange={setReceiptLines} products={products.data?.items ?? []} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Select
                   label="Product"
                   value={productId}
@@ -285,7 +286,7 @@ function NewOperationWorkspace({
                 {type === "delivery" && selectedProduct && (
                   <p className="self-end pb-2 text-sm text-muted-foreground">Free to use: {selectedProduct.freeToUse ?? "—"} {selectedProduct.unit}</p>
                 )}
-              </div>
+              </div>}
               {type === "delivery" && selectedProduct && Number(quantity) > Number(selectedProduct.freeToUse ?? 0) && (
                 <p role="note" className="mt-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2 text-sm text-warning">
                   This quantity exceeds free-to-use stock. The operation will remain waiting until covered.
@@ -299,7 +300,7 @@ function NewOperationWorkspace({
               type="submit"
               disabled={
                 create.isPending ||
-                !productId ||
+                (type === "receipt" ? receiptLines.some((line) => !line.productId || !line.quantity) : !productId) ||
                 !locationId ||
                 (usesPartner && !partnerId) ||
                 (isTransfer && (!destinationLocationId || destinationLocationId === locationId))
@@ -344,6 +345,7 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
       section={`Operations / ${label}`}
       title={`${label} ${data?.reference ?? ""}`}
       description="Review the operation, edit draft details, then move it through the stock workflow."
+      hideHeading={type === "receipt"}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href={kind === "transfers" ? "/moves" : `/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
@@ -376,6 +378,14 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
             setMessage("Operation updated.");
             showUpdateSuccessToast(label);
           }}
+        />
+      ) : type === "receipt" ? (
+        <ReceiptDetail
+          operation={data}
+          message={message}
+          actionPending={action.isPending}
+          onAction={(name) => action.mutate(name)}
+          onEdit={() => setIsEditing(true)}
         />
       ) : (
         <div>
@@ -455,6 +465,7 @@ function OperationEditForm({
   );
   const [productId, setProductId] = useState(firstLine?.productId ?? "");
   const [quantity, setQuantity] = useState(firstLine?.quantity ?? "");
+  const [receiptLines, setReceiptLines] = useState((operation.lines ?? []).map((line) => ({ productId: line.productId, quantity: line.quantity })));
 
   const update = useMutation({
     mutationFn: () => stockApi.updateOperation(id, {
@@ -463,7 +474,7 @@ function OperationEditForm({
       sourceLocationId: type === "delivery" ? locationId : null,
       destinationLocationId: type === "receipt" ? locationId : null,
       scheduleDate: new Date(scheduleDateTime).toISOString(),
-      lines: [{ productId, quantity }],
+      lines: type === "receipt" ? receiptLines : [{ productId, quantity }],
     }),
     onSuccess: async (updated) => {
       queryClient.setQueryData(["operation", id], updated);
@@ -573,8 +584,8 @@ function OperationEditForm({
         </div>
       </RoutePanel>
       <div className="mt-5">
-        <RoutePanel title="Edit product line" description="Quantities are validated against stock availability by the server.">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <RoutePanel title={type === "receipt" ? "Products" : "Edit product line"} description="Quantities are validated against stock availability by the server.">
+          {type === "receipt" ? <ReceiptLineEditor lines={receiptLines} onChange={setReceiptLines} products={products.data?.items ?? []} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Select
               label="Product"
               value={productId}
@@ -593,7 +604,7 @@ function OperationEditForm({
             {type === "delivery" && selectedProduct && (
               <p className="self-end pb-2 text-sm text-muted-foreground">Free to use: {selectedProduct.freeToUse ?? "—"} {selectedProduct.unit}</p>
             )}
-          </div>
+          </div>}
           {type === "delivery" && selectedProduct && Number(quantity) > Number(selectedProduct.freeToUse ?? 0) && (
             <p role="note" className="mt-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2 text-sm text-warning">
               This quantity exceeds free-to-use stock. The operation will remain waiting until covered.
@@ -604,7 +615,7 @@ function OperationEditForm({
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="min-h-5 text-sm text-muted-foreground" role="status">{message}</p>
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={update.isPending || !productId || !locationId || (usesPartner && !partnerId)}>
+          <Button type="submit" disabled={update.isPending || (type === "receipt" ? receiptLines.some((line) => !line.productId || !line.quantity) : !productId) || !locationId || (usesPartner && !partnerId)}>
             <Save /> {update.isPending ? "Saving…" : "Save changes"}
           </Button>
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
