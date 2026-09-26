@@ -6,21 +6,40 @@ PostgreSQL via Neon is the default database.
 """
 
 from functools import lru_cache
+from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(_BACKEND_ENV), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # Database (PostgreSQL — asyncpg driver)
     database_url: str = "postgresql+asyncpg://user:pass@localhost/stocksense"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, v: str) -> str:
+        """Ensure connection string uses postgresql+asyncpg and ssl=require for Neon."""
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("postgres://"):
+                v = "postgresql+asyncpg://" + v[len("postgres://"):]
+            elif v.startswith("postgresql://") and not v.startswith("postgresql+"):
+                v = "postgresql+asyncpg://" + v[len("postgresql://"):]
+            if "sslmode=" in v:
+                v = v.replace("sslmode=", "ssl=")
+        return v
 
     # JWT
     secret_key: str = "change-me-to-a-random-64-char-string"

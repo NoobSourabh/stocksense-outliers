@@ -16,6 +16,7 @@ type StockRow = { product: Product; balance: Balance };
 
 export default function StockPage() {
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [warehouseId, setWarehouseId] = useState("");
   const [locationId, setLocationId] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -53,21 +54,24 @@ export default function StockPage() {
   const headerHref = adjustmentHref(filteredRows.length === 1 ? filteredRows[0] : undefined, locationId);
 
   return (
-    <RouteScaffold section="Inventory" title="Stock on hand" description="Review physical and free-to-use quantities by product and location.">
-      <RoutePanel title="Current stock" description="Free to use is calculated from on-hand stock minus open delivery commitments.">
-        <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(220px,1fr)_minmax(170px,220px)_minmax(170px,220px)_auto] sm:items-center">
-          <label className="relative min-w-0">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search product, SKU, or location" aria-label="Search stock" className="h-10 pl-9" />
-          </label>
+    <RouteScaffold section="Inventory" title="Stock" description="Review and update inventory quantities." hideHeading>
+      <RoutePanel>
+        <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+          <h1 className="text-xl font-semibold tracking-tight">Stock</h1>
+          <Button type="button" variant="ghost" size="icon" aria-label={searchOpen ? "Close stock search" : "Search stock"} aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => { if (open) setSearch(""); return !open; })}>
+            <Search className="size-4" />
+          </Button>
+        </div>
+        <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_auto] sm:items-center">
           <select aria-label="Filter stock by warehouse" value={warehouseId} onChange={(event) => { setWarehouseId(event.target.value); setLocationId(""); }} className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm">
             <option value="">All warehouses</option>{warehouses.data?.items.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
           </select>
           <select aria-label="Filter stock by location" value={locationId} onChange={(event) => setLocationId(event.target.value)} disabled={warehouses.isPending} className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-60">
             <option value="">All locations</option>{availableLocations.map((location) => <option key={location.id} value={location.id}>{location.name} · {location.warehouseName}</option>)}
           </select>
-          <Link href={headerHref} className="sm:justify-self-end"><Button variant="outline" className="w-full sm:w-auto">Update stock</Button></Link>
+          <Link href={headerHref} className="sm:justify-self-end"><Button variant="outline" className="w-full sm:w-auto">Update Stock</Button></Link>
         </div>
+        {searchOpen && <div className="mb-4 max-w-md"><Input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search product, SKU, or location" aria-label="Search stock" className="h-10" /></div>}
         {stock.isPending || warehouses.isPending ? (
           <div className="py-2"><SkeletonTable columns={9} rows={6} showSearch={false} showPagination={false} /></div>
         ) : stock.isError || warehouses.isError ? (
@@ -81,17 +85,13 @@ export default function StockPage() {
           <>
             <div className="space-y-3 md:hidden">{filteredRows.map((row) => <StockCard key={`${row.product.id}-${row.balance.locationId}`} row={row} />)}</div>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[980px] text-left">
-                <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Product", "SKU", "Location", "Warehouse", "Unit cost", "On hand", "Free to use", "Reorder point", "Actions"].map((heading) => <th key={heading} className="px-3 py-3 font-medium">{heading}</th>)}</tr></thead>
+              <table className="w-full min-w-[680px] text-left">
+                <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Product", "Per unit cost", "On hand", "Free to use", "Actions"].map((heading) => <th key={heading} className="px-3 py-3 font-medium">{heading}</th>)}</tr></thead>
                 <tbody>{filteredRows.map(({ product, balance }) => <tr key={`${product.id}-${balance.locationId}`} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
-                  <td className="px-3 py-3 text-sm"><Link className="font-medium text-primary hover:underline" href={`/products/${product.id}`}>{product.name}</Link></td>
-                  <td className="px-3 py-3 font-mono text-sm">{product.sku}</td>
-                  <td className="px-3 py-3 text-sm">{balance.locationName}</td>
-                  <td className="px-3 py-3 text-sm">{balance.warehouseName}</td>
+                  <td className="px-3 py-3 text-sm"><Link className="font-medium text-primary hover:underline" href={`/products/${product.id}`}>{product.name}</Link><p className="mt-0.5 text-xs text-muted-foreground">{product.sku} · {balance.locationName} · {balance.warehouseName}</p></td>
                   <td className="px-3 py-3 text-sm">₹{product.unitCost} / {product.unit}</td>
                   <td className="px-3 py-3 font-mono text-sm font-medium">{balance.onHand} {product.unit}</td>
                   <td className="px-3 py-3 font-mono text-sm font-medium">{balance.freeToUse} {product.unit}</td>
-                  <td className="px-3 py-3 font-mono text-sm text-muted-foreground">{product.reorderPoint} {product.unit}</td>
                   <td className="px-3 py-3"><Link href={adjustmentHref({ product, balance })}><Button size="sm" variant="outline">Update</Button></Link></td>
                 </tr>)}</tbody>
               </table>
@@ -121,7 +121,7 @@ function StockCard({ row }: { row: StockRow }) {
   return <article className="rounded-lg border border-border p-4">
     <div className="flex items-start justify-between gap-3"><div className="min-w-0"><Link className="font-medium text-primary hover:underline" href={`/products/${product.id}`}>{product.name}</Link><p className="mt-1 font-mono text-xs text-muted-foreground">{product.sku}</p></div><Link href={adjustmentHref(row)}><Button size="sm" variant="outline">Update</Button></Link></div>
     <p className="mt-2 text-xs text-muted-foreground">{balance.locationName} · {balance.warehouseName}</p>
-    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm"><Metric label="Unit cost" value={`₹${product.unitCost} / ${product.unit}`} /><Metric label="Reorder point" value={`${product.reorderPoint} ${product.unit}`} /><Metric label="On hand" value={`${balance.onHand} ${product.unit}`} /><Metric label="Free to use" value={`${balance.freeToUse} ${product.unit}`} /></dl>
+    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm"><Metric label="Per unit cost" value={`₹${product.unitCost} / ${product.unit}`} /><Metric label="On hand" value={`${balance.onHand} ${product.unit}`} /><Metric label="Free to use" value={`${balance.freeToUse} ${product.unit}`} /></dl>
   </article>;
 }
 

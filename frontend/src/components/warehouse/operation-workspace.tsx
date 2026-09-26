@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Edit2, Printer, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Edit2, Printer, RefreshCw, Save, Trash2 } from "lucide-react";
 import { stockApi, type Operation, type Product } from "@/lib/stock-api";
 import { ApiError } from "@/lib/api";
 import { showCreateSuccessToast, showUpdateSuccessToast, showErrorToast } from "@/lib/toast-utils";
@@ -114,7 +114,7 @@ function NewOperationWorkspace({
   const [destinationLocationId, setDestinationLocationId] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [quantity, setQuantity] = useState(defaultCount);
-  const [receiptLines, setReceiptLines] = useState([{ productId: defaultProductId, quantity: defaultCount }]);
+  const [productLines, setProductLines] = useState([{ productId: defaultProductId, quantity: defaultCount }]);
   const [reason, setReason] = useState("");
   const [scheduleDateTime, setScheduleDateTime] = useState(() => {
     const d = new Date();
@@ -131,7 +131,7 @@ function NewOperationWorkspace({
         sourceLocationId: isTransfer ? locationId : type === "delivery" || type === "adjustment" ? locationId : null,
         destinationLocationId: isTransfer ? destinationLocationId : type === "receipt" ? locationId : null,
         scheduleDate: type === "adjustment" ? null : scheduleDateTime ? new Date(scheduleDateTime).toISOString() : null,
-        lines: type === "receipt" ? receiptLines : [{
+        lines: type === "receipt" || type === "delivery" ? productLines : [{
           productId,
           quantity: type === "adjustment" ? "0" : quantity,
           ...(type === "adjustment" ? { countedQuantity: quantity, reason } : {}),
@@ -267,7 +267,7 @@ function NewOperationWorkspace({
           </RoutePanel>
           <div className="mt-5">
             <RoutePanel title="Product lines" description={type === "adjustment" ? "Enter the counted quantity; the server calculates the delta when validated." : "Quantities are validated against stock availability by the server."}>
-              {type === "receipt" ? <ReceiptLineEditor lines={receiptLines} onChange={setReceiptLines} products={products.data?.items ?? []} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {usesPartner ? <ProductLineEditor lines={productLines} onChange={setProductLines} products={products.data?.items ?? []} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Select
                   label="Product"
                   value={productId}
@@ -283,15 +283,7 @@ function NewOperationWorkspace({
                   min="0"
                   step="0.001"
                 />
-                {type === "delivery" && selectedProduct && (
-                  <p className="self-end pb-2 text-sm text-muted-foreground">Free to use: {selectedProduct.freeToUse ?? "—"} {selectedProduct.unit}</p>
-                )}
               </div>}
-              {type === "delivery" && selectedProduct && Number(quantity) > Number(selectedProduct.freeToUse ?? 0) && (
-                <p role="note" className="mt-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2 text-sm text-warning">
-                  This quantity exceeds free-to-use stock. The operation will remain waiting until covered.
-                </p>
-              )}
             </RoutePanel>
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -300,7 +292,7 @@ function NewOperationWorkspace({
               type="submit"
               disabled={
                 create.isPending ||
-                (type === "receipt" ? receiptLines.some((line) => !line.productId || !line.quantity) : !productId) ||
+                (usesPartner ? productLines.length === 0 || productLines.some((line) => !line.productId || !line.quantity) : !productId) ||
                 !locationId ||
                 (usesPartner && !partnerId) ||
                 (isTransfer && (!destinationLocationId || destinationLocationId === locationId))
@@ -345,9 +337,9 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
       section={`Operations / ${label}`}
       title={`${label} ${data?.reference ?? ""}`}
       description="Review the operation, edit draft details, then move it through the stock workflow."
-      hideHeading={type === "receipt"}
+      hideHeading={type === "receipt" || type === "delivery"}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {type !== "receipt" && type !== "delivery" && <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href={kind === "transfers" ? "/moves" : `/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> {kind === "transfers" ? "Back to move history" : `Back to ${kind}`}
         </Link>
@@ -359,7 +351,7 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
           )}
           {data && <StatusBadge status={data.status.charAt(0).toUpperCase() + data.status.slice(1)} />}
         </div>
-      </div>
+      </div>}
       {operation.isPending ? (
         <div className="py-2"><SkeletonForm /></div>
       ) : operation.isError || !data ? (
@@ -381,6 +373,14 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
         />
       ) : type === "receipt" ? (
         <ReceiptDetail
+          operation={data}
+          message={message}
+          actionPending={action.isPending}
+          onAction={(name) => action.mutate(name)}
+          onEdit={() => setIsEditing(true)}
+        />
+      ) : type === "delivery" ? (
+        <DeliveryDetail
           operation={data}
           message={message}
           actionPending={action.isPending}
@@ -426,6 +426,153 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
   );
 }
 
+function ReceiptDetail({
+  operation,
+  message,
+  actionPending,
+  onAction,
+  onEdit,
+}: {
+  operation: Operation;
+  message: string;
+  actionPending: boolean;
+  onAction: (name: "ready" | "validate" | "cancel") => void;
+  onEdit: () => void;
+}) {
+  const currentStep = ["draft", "ready", "done"].indexOf(operation.status);
+  return (
+    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-m3-1">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-6">
+        <Link href="/operations/receipts/new"><Button type="button" variant="outline" size="sm">New</Button></Link>
+        <h1 className="text-lg font-semibold">Receipt</h1>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap gap-2 print:hidden">
+          {operation.status === "draft" && <Button type="button" variant="outline" disabled={actionPending} onClick={() => onAction("ready")}><Check /> To Do</Button>}
+          {operation.status === "ready" && <Button type="button" disabled={actionPending} onClick={() => onAction("validate")}><Check /> Validate</Button>}
+          {!(["done", "canceled"].includes(operation.status)) && <Button type="button" variant="outline" disabled={actionPending} onClick={() => onAction("cancel")}>Cancel</Button>}
+          {operation.status === "done" && <Button type="button" variant="outline" onClick={() => window.print()}><Printer /> Print</Button>}
+          {operation.status === "draft" && <Button type="button" variant="ghost" onClick={onEdit}><Edit2 /> Edit</Button>}
+        </div>
+        <ol className="flex items-center gap-2 text-xs sm:text-sm" aria-label={`Receipt status: ${operation.status}`}>
+          {["Draft", "Ready", "Done"].map((step, index) => <li key={step} className="flex items-center gap-2">
+            <span className={`rounded-full px-2.5 py-1 ${index === currentStep ? "bg-primary text-primary-foreground" : index < currentStep ? "bg-success-bg text-success" : "bg-muted text-muted-foreground"}`}>{step}</span>
+            {index < 2 && <span className="text-muted-foreground" aria-hidden="true">›</span>}
+          </li>)}
+        </ol>
+        {operation.status === "canceled" && <StatusBadge status="Canceled" />}
+      </div>
+      <div className="border-b border-border px-4 py-5 sm:px-6">
+        <h2 className="mb-4 font-mono text-lg font-semibold tracking-wide">{operation.reference}</h2>
+        <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ReceiptDetailField label="Receive From" value={operation.partnerName ?? "—"} />
+          <ReceiptDetailField label="Schedule Date" value={formatDateTime(operation.scheduleDate).split(",")[0]} />
+          <ReceiptDetailField label="Responsible" value={operation.createdByName ?? "—"} />
+        </dl>
+      </div>
+      <div className="px-4 py-5 sm:px-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Products</h2>
+          {operation.status === "draft" && <Button type="button" variant="outline" size="sm" className="print:hidden" onClick={onEdit}>New Product</Button>}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left">
+            <thead><tr className="border-y border-border bg-muted/50 text-sm text-muted-foreground"><th className="px-3 py-2.5 font-medium">Product</th><th className="px-3 py-2.5 text-right font-medium">Quantity</th></tr></thead>
+            <tbody>
+              {operation.lines?.map((line) => <tr key={line.id} className="border-b border-border/70 last:border-0">
+                <td className="px-3 py-3 text-sm"><span className="font-mono text-muted-foreground">[{line.productSku}]</span> {line.productName}</td>
+                <td className="px-3 py-3 text-right text-sm font-medium tabular-nums">{line.quantity}</td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>
+        {operation.status === "done" && <p className="mt-4 text-sm text-success print:hidden">Receipt validated. Stock and ledger are updated.</p>}
+        <p className="mt-3 min-h-5 text-sm text-muted-foreground print:hidden" role="status">{message}</p>
+      </div>
+    </section>
+  );
+}
+
+function ReceiptDetailField({ label, value }: { label: string; value: string }) {
+  return <div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 border-b border-border pb-2 text-sm font-medium">{value}</dd></div>;
+}
+
+function DeliveryDetail({
+  operation,
+  message,
+  actionPending,
+  onAction,
+  onEdit,
+}: {
+  operation: Operation;
+  message: string;
+  actionPending: boolean;
+  onAction: (name: "ready" | "validate" | "cancel") => void;
+  onEdit: () => void;
+}) {
+  const steps = ["draft", "waiting", "ready", "done"];
+  const currentStep = steps.indexOf(operation.status);
+  const shortLines = operation.lines?.filter((line) => line.isShort) ?? [];
+  const referencePrefix = operation.reference.split("/").slice(0, 2).join("/");
+  return (
+    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-m3-1">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-6">
+        <Link href="/operations/deliveries/new"><Button type="button" variant="outline" size="sm">New</Button></Link>
+        <h1 className="text-lg font-semibold">Delivery</h1>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap gap-2 print:hidden">
+          {operation.status === "draft" && <Button type="button" variant="outline" disabled={actionPending} onClick={() => onAction("ready")}><Check /> To Do</Button>}
+          {operation.status === "waiting" && <Button type="button" variant="outline" disabled={actionPending} onClick={() => onAction("ready")}><RefreshCw /> Check Availability</Button>}
+          {operation.status === "ready" && <Button type="button" disabled={actionPending} onClick={() => onAction("validate")}><Check /> Validate</Button>}
+          {!(["done", "canceled"].includes(operation.status)) && <Button type="button" variant="outline" disabled={actionPending} onClick={() => onAction("cancel")}>Cancel</Button>}
+          {operation.status === "done" && <Button type="button" variant="outline" onClick={() => window.print()}><Printer /> Print</Button>}
+          {operation.status === "draft" && <Button type="button" variant="ghost" onClick={onEdit}><Edit2 /> Edit</Button>}
+        </div>
+        <ol className="flex flex-wrap items-center gap-2 text-xs sm:text-sm" aria-label={`Delivery status: ${operation.status}`}>
+          {steps.map((step, index) => <li key={step} className="flex items-center gap-2">
+            <span className={`rounded-full px-2.5 py-1 capitalize ${index === currentStep ? "bg-primary text-primary-foreground" : index < currentStep ? "bg-success-bg text-success" : "bg-muted text-muted-foreground"}`}>{step}</span>
+            {index < steps.length - 1 && <span className="text-muted-foreground" aria-hidden="true">›</span>}
+          </li>)}
+        </ol>
+        {operation.status === "canceled" && <StatusBadge status="Canceled" />}
+      </div>
+      <div className="border-b border-border px-4 py-5 sm:px-6">
+        <h2 className="mb-4 font-mono text-lg font-semibold tracking-wide">{operation.reference}</h2>
+        <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ReceiptDetailField label="Delivery Address" value={operation.partnerName ?? "—"} />
+          <ReceiptDetailField label="Schedule Date" value={formatDateTime(operation.scheduleDate).split(",")[0]} />
+          <ReceiptDetailField label="Responsible" value={operation.createdByName ?? "—"} />
+          <ReceiptDetailField label="Operation Type" value={`${referencePrefix || "WH/OUT"} · Delivery Orders`} />
+        </dl>
+      </div>
+      <div className="px-4 py-5 sm:px-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Products</h2>
+          {operation.status === "draft" && <Button type="button" variant="outline" size="sm" className="print:hidden" onClick={onEdit}>New Product</Button>}
+        </div>
+        {shortLines.length > 0 && <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive" role="alert">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <p>{shortLines.length === 1 ? `Product [${shortLines[0].productSku}] ${shortLines[0].productName} is not fully in stock.` : `${shortLines.length} products are not fully in stock.`} This delivery is waiting for availability.</p>
+        </div>}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left">
+            <thead><tr className="border-y border-border bg-muted/50 text-sm text-muted-foreground"><th className="px-3 py-2.5 font-medium">Product</th><th className="px-3 py-2.5 text-right font-medium">Quantity</th></tr></thead>
+            <tbody>
+              {operation.lines?.map((line) => <tr key={line.id} className={line.isShort ? "border-b border-destructive/20 bg-destructive/5 last:border-0" : "border-b border-border/70 last:border-0"}>
+                <td className={`px-3 py-3 text-sm ${line.isShort ? "text-destructive" : ""}`}><span className="font-mono opacity-80">[{line.productSku}]</span> {line.productName}{line.isShort && <p className="mt-1 text-xs font-medium">Insufficient free stock</p>}</td>
+                <td className={`px-3 py-3 text-right text-sm font-medium tabular-nums ${line.isShort ? "text-destructive" : ""}`}>{line.quantity}</td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>
+        {operation.status === "done" && <p className="mt-4 text-sm text-success print:hidden">Delivery validated. Stock and ledger are updated.</p>}
+        <p className="mt-3 min-h-5 text-sm text-muted-foreground print:hidden" role="status">{message}</p>
+      </div>
+    </section>
+  );
+}
+
 function OperationEditForm({
   id,
   kind,
@@ -465,7 +612,7 @@ function OperationEditForm({
   );
   const [productId, setProductId] = useState(firstLine?.productId ?? "");
   const [quantity, setQuantity] = useState(firstLine?.quantity ?? "");
-  const [receiptLines, setReceiptLines] = useState((operation.lines ?? []).map((line) => ({ productId: line.productId, quantity: line.quantity })));
+  const [productLines, setProductLines] = useState((operation.lines ?? []).map((line) => ({ productId: line.productId, quantity: line.quantity })));
 
   const update = useMutation({
     mutationFn: () => stockApi.updateOperation(id, {
@@ -474,7 +621,7 @@ function OperationEditForm({
       sourceLocationId: type === "delivery" ? locationId : null,
       destinationLocationId: type === "receipt" ? locationId : null,
       scheduleDate: new Date(scheduleDateTime).toISOString(),
-      lines: type === "receipt" ? receiptLines : [{ productId, quantity }],
+      lines: usesPartner ? productLines : [{ productId, quantity }],
     }),
     onSuccess: async (updated) => {
       queryClient.setQueryData(["operation", id], updated);
@@ -584,8 +731,8 @@ function OperationEditForm({
         </div>
       </RoutePanel>
       <div className="mt-5">
-        <RoutePanel title={type === "receipt" ? "Products" : "Edit product line"} description="Quantities are validated against stock availability by the server.">
-          {type === "receipt" ? <ReceiptLineEditor lines={receiptLines} onChange={setReceiptLines} products={products.data?.items ?? []} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <RoutePanel title={usesPartner ? "Products" : "Edit product line"} description="Quantities are validated against stock availability by the server.">
+          {usesPartner ? <ProductLineEditor lines={productLines} onChange={setProductLines} products={products.data?.items ?? []} /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Select
               label="Product"
               value={productId}
@@ -601,21 +748,13 @@ function OperationEditForm({
               min="0"
               step="0.001"
             />
-            {type === "delivery" && selectedProduct && (
-              <p className="self-end pb-2 text-sm text-muted-foreground">Free to use: {selectedProduct.freeToUse ?? "—"} {selectedProduct.unit}</p>
-            )}
           </div>}
-          {type === "delivery" && selectedProduct && Number(quantity) > Number(selectedProduct.freeToUse ?? 0) && (
-            <p role="note" className="mt-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2 text-sm text-warning">
-              This quantity exceeds free-to-use stock. The operation will remain waiting until covered.
-            </p>
-          )}
         </RoutePanel>
       </div>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="min-h-5 text-sm text-muted-foreground" role="status">{message}</p>
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={update.isPending || (type === "receipt" ? receiptLines.some((line) => !line.productId || !line.quantity) : !productId) || !locationId || (usesPartner && !partnerId)}>
+          <Button type="submit" disabled={update.isPending || (usesPartner ? productLines.length === 0 || productLines.some((line) => !line.productId || !line.quantity) : !productId) || !locationId || (usesPartner && !partnerId)}>
             <Save /> {update.isPending ? "Saving…" : "Save changes"}
           </Button>
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
@@ -681,6 +820,39 @@ function Lines({ operation }: { operation: Operation }) {
       </table>
     </div>
   );
+}
+
+type EditableProductLine = { productId: string; quantity: string };
+
+function ProductLineEditor({
+  lines,
+  onChange,
+  products,
+}: {
+  lines: EditableProductLine[];
+  onChange: (lines: EditableProductLine[]) => void;
+  products: Product[];
+}) {
+  function updateLine(index: number, patch: Partial<EditableProductLine>) {
+    onChange(lines.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
+  }
+
+  return <div className="grid gap-3">
+    <div className="hidden grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_2rem] gap-3 px-1 text-xs font-medium text-muted-foreground sm:grid">
+      <span>Product</span><span>Quantity</span><span />
+    </div>
+    {lines.map((line, index) => <div key={index} className="grid items-end gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_2rem]">
+      <Select
+        label={index === 0 ? "Product" : `Product ${index + 1}`}
+        value={line.productId}
+        onChange={(productId) => updateLine(index, { productId })}
+        options={products.map((product) => [product.id, `${product.sku} · ${product.name}`] as [string, string])}
+      />
+      <Field label="Quantity" type="number" value={line.quantity} onChange={(quantity) => updateLine(index, { quantity })} required min="0" step="0.001" />
+      <Button type="button" variant="ghost" size="icon" aria-label={`Remove product line ${index + 1}`} title="Remove product" disabled={lines.length === 1} onClick={() => onChange(lines.filter((_, lineIndex) => lineIndex !== index))} className="mb-0.5 text-muted-foreground hover:text-destructive"><Trash2 /></Button>
+    </div>)}
+    <div><Button type="button" variant="outline" size="sm" onClick={() => onChange([...lines, { productId: "", quantity: "1" }])}>New Product</Button></div>
+  </div>;
 }
 
 function Select({

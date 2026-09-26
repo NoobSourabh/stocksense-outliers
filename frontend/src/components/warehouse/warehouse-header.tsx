@@ -36,6 +36,70 @@ const navigation = [
   },
 ];
 
+function NavDropdown({
+  label,
+  items,
+  mobile = false,
+  isCurrent,
+}: {
+  label: string;
+  items: { label: string; href: string }[];
+  mobile?: boolean;
+  isCurrent: (href: string) => boolean;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const isActive = items.some((child) => isCurrent(child.href));
+
+  useEffect(() => {
+    if (mobile) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) {
+        detailsRef.current.removeAttribute("open");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobile]);
+
+  return (
+    <details
+      ref={detailsRef}
+      className={mobile ? "group" : "group relative"}
+      open={mobile ? isActive : undefined}
+    >
+      <summary
+        className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 ${mobile ? "py-2.5" : "py-1.5"} text-sm font-medium transition-colors marker:hidden [&::-webkit-details-marker]:hidden ${
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+      >
+        {label}
+        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div
+        className={`z-30 mt-1 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-m3-2 ${
+          mobile ? "ml-3" : "absolute left-0 top-full"
+        }`}
+      >
+        {items.map((child) => (
+          <Link
+            key={child.href}
+            href={child.href}
+            aria-current={isCurrent(child.href) ? "page" : undefined}
+            onClick={() => {
+              if (!mobile) detailsRef.current?.removeAttribute("open");
+            }}
+            className={`block rounded-md px-3 ${mobile ? "py-2.5" : "py-2"} text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isCurrent(child.href) ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
+          >
+            {child.label}
+          </Link>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function NavigationItems({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
   const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
@@ -43,34 +107,7 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
     <>
       {navigation.map((item) =>
         "items" in item && item.items ? (
-          <details key={item.label} className={mobile ? "group" : "group relative"} open={item.items.some((child) => isCurrent(child.href))}>
-            <summary
-                className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 ${mobile ? "py-2.5" : "py-1.5"} text-sm font-medium transition-colors marker:hidden [&::-webkit-details-marker]:hidden ${
-                item.items.some((child) => isCurrent(child.href))
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {item.label}
-              <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
-            </summary>
-            <div
-              className={`z-30 mt-1 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-m3-2 ${
-                mobile ? "ml-3" : "absolute left-0 top-full"
-              }`}
-            >
-              {item.items?.map((child) => (
-                <Link
-                  key={child.href}
-                  href={child.href}
-                  aria-current={isCurrent(child.href) ? "page" : undefined}
-                  className={`block rounded-md px-3 ${mobile ? "py-2.5" : "py-2"} text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isCurrent(child.href) ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
-                >
-                  {child.label}
-                </Link>
-              ))}
-            </div>
-          </details>
+          <NavDropdown key={item.label} label={item.label} items={item.items} mobile={mobile} isCurrent={isCurrent} />
         ) : (
           <Link
             key={item.label}

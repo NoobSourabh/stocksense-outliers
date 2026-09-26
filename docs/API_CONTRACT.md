@@ -448,6 +448,7 @@ Immutable audit log of all stock movements.
         "id": "uuid",
         "reference": "WH/IN/0001",
         "operationType": "receipt",
+        "status": "done",
         "product": {
           "id": "uuid",
           "sku": "RAW-STL-001",

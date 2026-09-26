@@ -48,6 +48,7 @@ async def list_moves_route(
             operationId=str(m.operation_id),
             reference=m.operation.reference if m.operation else "",
             type=m.operation.type.value if m.operation else "",
+            status=m.operation.status.value if m.operation else "done",
             productId=str(m.product_id),
             productName=m.product.name if m.product else "",
             productSku=m.product.sku if m.product else "",
