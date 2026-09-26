@@ -22,16 +22,26 @@ export default function StockPage() {
     queryKey: ["stock", "availability"],
     queryFn: async () => {
       const products = await stockApi.products();
-      return Promise.all(products.items.map(async (product) => ({ product, details: await stockApi.product(product.id) })));
+      const results = await Promise.allSettled(
+        products.items.map(async (product) => ({
+          product,
+          details: await stockApi.product(product.id),
+        }))
+      );
+      return results
+        .filter((r): r is PromiseFulfilledResult<{ product: (typeof products.items)[number]; details: Awaited<ReturnType<typeof stockApi.product>> }> => r.status === "fulfilled")
+        .map((r) => r.value);
     },
   });
 
   const allRows = useMemo(() => stock.data?.flatMap(({ product, details }) =>
     (details.balances ?? []).map((balance) => ({ product, balance }))
   ) ?? [], [stock.data]);
-  const availableLocations = warehouses.data?.items
-    .filter((warehouse) => !warehouseId || warehouse.id === warehouseId)
-    .flatMap((warehouse) => warehouse.locations.map((location) => ({ ...location, warehouseName: warehouse.name }))) ?? [];
+  const availableLocations = useMemo(() => {
+    return warehouses.data?.items
+      .filter((warehouse) => !warehouseId || warehouse.id === warehouseId)
+      .flatMap((warehouse) => warehouse.locations?.map((location) => ({ ...location, warehouseName: warehouse.name })) ?? []) ?? [];
+  }, [warehouses.data, warehouseId]);
   const filteredRows = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     return allRows.filter(({ product, balance }) =>
