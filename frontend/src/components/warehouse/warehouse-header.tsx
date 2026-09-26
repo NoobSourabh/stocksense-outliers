@@ -2,17 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import {
-  Bell,
   Boxes,
   ChevronDown,
   LogOut,
   Menu,
-  Search,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { stockApi } from "@/lib/stock-api";
 
 const navigation = [
@@ -38,14 +36,16 @@ const navigation = [
 ];
 
 function NavigationItems({ mobile = false }: { mobile?: boolean }) {
+  const pathname = usePathname();
+  const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   return (
     <>
       {navigation.map((item) =>
         "items" in item && item.items ? (
-          <details key={item.label} className={mobile ? "group" : "group relative"}>
+          <details key={item.label} className={mobile ? "group" : "group relative"} open={item.items.some((child) => isCurrent(child.href))}>
             <summary
-              className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors marker:hidden [&::-webkit-details-marker]:hidden ${
-                item.label === "Settings"
+                className={`flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 ${mobile ? "py-2.5" : "py-1.5"} text-sm font-medium transition-colors marker:hidden [&::-webkit-details-marker]:hidden ${
+                item.items.some((child) => isCurrent(child.href))
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
@@ -62,7 +62,8 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
                 <Link
                   key={child.href}
                   href={child.href}
-                  className="block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  aria-current={isCurrent(child.href) ? "page" : undefined}
+                  className={`block rounded-md px-3 ${mobile ? "py-2.5" : "py-2"} text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isCurrent(child.href) ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground"}`}
                 >
                   {child.label}
                 </Link>
@@ -73,7 +74,8 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
           <Link
             key={item.label}
             href={item.href}
-            className="flex items-center rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-current={isCurrent(item.href) ? "page" : undefined}
+            className={`flex items-center rounded-md px-2.5 ${mobile ? "py-2.5" : "py-1.5"} text-sm font-medium transition-colors hover:bg-muted hover:text-foreground ${isCurrent(item.href) ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
           >
             {item.label}
           </Link>
@@ -209,12 +211,17 @@ function MobileNavMenu({ onLogout }: { onLogout: () => void }) {
 
   return (
     <details ref={detailsRef} className="group relative xl:hidden">
-      <summary className="grid size-8 cursor-pointer list-none place-items-center rounded-md transition-colors hover:bg-muted marker:hidden [&::-webkit-details-marker]:hidden" aria-label="Open navigation">
+      <summary className="grid size-11 cursor-pointer list-none place-items-center rounded-md transition-colors hover:bg-muted marker:hidden [&::-webkit-details-marker]:hidden" aria-label="Open navigation">
         <Menu className="size-4" />
       </summary>
       <nav
         className="absolute right-0 top-full z-40 mt-2 max-h-[75vh] w-72 overflow-y-auto rounded-xl border border-border/80 bg-popover p-2 text-popover-foreground shadow-xl"
         aria-label="Mobile navigation"
+        onClick={(event) => {
+          if (event.target instanceof Element && event.target.closest("a")) {
+            detailsRef.current?.removeAttribute("open");
+          }
+        }}
       >
         <div className="flex items-center gap-2.5 rounded-lg bg-muted/50 p-2.5 mb-2 border border-border/40">
           <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-xs text-primary ring-1 ring-border/60">
@@ -223,7 +230,7 @@ function MobileNavMenu({ onLogout }: { onLogout: () => void }) {
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-xs font-semibold text-foreground">
-              {user?.name ?? "StockSense User"}
+              {user?.name ?? "User"}
             </span>
             <span className="truncate text-[11px] text-muted-foreground capitalize">
               {roleLabel} {user?.email ? `• ${user.email}` : ""}
@@ -232,11 +239,11 @@ function MobileNavMenu({ onLogout }: { onLogout: () => void }) {
         </div>
         <NavigationItems mobile />
         <div className="my-2 border-t border-border/60" />
-        <Link href="/profile" className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground">
+        <Link href="/profile" className="flex items-center gap-2.5 rounded-md px-2.5 py-2.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground">
           <UserRound className="size-4 text-muted-foreground" />
           My Profile
         </Link>
-        <button type="button" onClick={onLogout} className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-destructive hover:bg-destructive/10">
+        <button type="button" onClick={onLogout} className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2.5 text-left text-xs font-medium text-destructive hover:bg-destructive/10">
           <LogOut className="size-4" />
           Logout
         </button>
@@ -277,26 +284,6 @@ export function WarehouseHeader() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <label className="relative hidden w-56 lg:block">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              className="h-8 w-full rounded-md bg-muted pl-8 pr-10 text-xs outline-none ring-primary-500/40 transition focus:bg-card focus:ring-2"
-              placeholder="Search SKU, Bin..."
-              aria-label="Search SKU or bin"
-            />
-            <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1 font-mono text-[10px] text-muted-foreground">
-              ⌘K
-            </kbd>
-          </label>
-          <button
-            type="button"
-            className="relative grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Notifications"
-          >
-            <Bell className="size-4" />
-            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />
-          </button>
-          <div className="hidden h-5 w-px bg-border sm:block" />
           <ProfileMenu onLogout={() => void logout()} />
           <MobileNavMenu onLogout={() => void logout()} />
         </div>

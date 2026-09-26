@@ -41,12 +41,7 @@ interface DashboardOperation {
   destinationLocationName?: string | null;
 }
 
-type DashboardResponse = Omit<Dashboard, "recentOperations" | "lowStock"> & {
-  lowStock: Dashboard["lowStock"] | number | { count?: number; total?: number; items?: unknown[] };
-  scheduledTransfers?: number | { count?: number; total?: number };
-  activeProductCount?: number;
-  recentOperations: DashboardOperation[];
-};
+type DashboardResponse = Omit<Dashboard, "recentOperations"> & { recentOperations: DashboardOperation[] };
 
 const FILTERS: (keyof DashboardFilters)[] = ["type", "status", "warehouseId", "locationId", "categoryId"];
 
@@ -58,17 +53,6 @@ function readFilters(params: URLSearchParams): DashboardFilters {
     locationId: params.get("locationId") ?? "",
     categoryId: params.get("categoryId") ?? "",
   };
-}
-
-function countOf(value: DashboardResponse["lowStock"] | DashboardResponse["scheduledTransfers"] | undefined): number {
-  if (typeof value === "number") return value;
-  if (Array.isArray(value)) return value.length;
-  if (value && typeof value === "object") {
-    if (value.count !== undefined) return value.count;
-    if (value.total !== undefined) return value.total;
-    return "items" in value && Array.isArray(value.items) ? value.items.length : 0;
-  }
-  return 0;
 }
 
 function formatDate(value?: string | null): string {
@@ -135,23 +119,7 @@ export function DashboardClient() {
   const dashboardQuery = useQuery<DashboardResponse>({
     queryKey: ["dashboard", filters],
     queryFn: async () => {
-      const [dashboard, operationPage, receiptPage, deliveryPage, transferDrafts, transferReady, products] = await Promise.all([
-        stockApi.dashboard(filters),
-        stockApi.operations(filters),
-        stockApi.operations({ ...filters, type: "receipt" }),
-        stockApi.operations({ ...filters, type: "delivery" }),
-        stockApi.operations({ ...filters, type: "transfer", status: "draft" }),
-        stockApi.operations({ ...filters, type: "transfer", status: "ready" }),
-        stockApi.products("", filters.categoryId || undefined),
-      ]);
-      return {
-        ...dashboard,
-        receiptSummary: { ...dashboard.receiptSummary, total: receiptPage.total },
-        deliverySummary: { ...dashboard.deliverySummary, total: deliveryPage.total },
-        recentOperations: operationPage.items,
-        scheduledTransfers: dashboard.scheduledTransfers ?? transferDrafts.total + transferReady.total,
-        activeProductCount: dashboard.activeProductCount ?? products.total,
-      };
+      return stockApi.dashboard(filters);
     },
   });
 
@@ -225,9 +193,40 @@ export function DashboardClient() {
             <SummaryCard kind="delivery" title="Deliveries" primary={data.deliverySummary.toDeliver} late={data.deliverySummary.late} waiting={data.deliverySummary.waiting} total={data.deliverySummary.total} />
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <MetricCard title="Total products in stock" value={data.activeProductCount ?? "0"} hint="Active products in the catalog" icon={Boxes} />
-            <MetricCard title="Low / out of stock" value={countOf(data.lowStock)} hint="At or below reorder point" icon={AlertTriangle} tone="amber" />
-            <MetricCard title="Scheduled transfers" value={data.scheduledTransfers === undefined ? "0" : countOf(data.scheduledTransfers)} hint="Open internal moves" icon={CalendarClock} tone="green" />
+            <MetricCard title="Active products" value={data.activeProductCount} hint="Products in the catalog" icon={Boxes} />
+            <MetricCard title="Low / out of stock" value={data.lowStock.length} hint="At or below reorder point" icon={AlertTriangle} tone="amber" />
+            <MetricCard title="Scheduled transfers" value={data.scheduledTransfers} hint="Open internal moves" icon={CalendarClock} tone="green" />
+          </div>
+          <div className="mt-6">
+            <RoutePanel title="Low-stock attention" description="Active products at or below their reorder point in the selected stock scope.">
+              {data.lowStock.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No products need attention for this stock scope.</p>
+              ) : (
+                <>
+                <div className="grid gap-3 md:hidden">
+                  {data.lowStock.map((item) => <article key={item.productId} className="rounded-lg border border-border p-4">
+                    <div className="flex items-start justify-between gap-3"><Link href={`/products/${item.productId}`} className="font-medium text-primary hover:underline">{item.productName}</Link><span className="shrink-0 text-xs font-medium text-warning">{Number(item.onHand) === 0 ? "Out of stock" : "Low stock"}</span></div>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">{item.sku}</p>
+                    <dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">On hand</dt><dd className="mt-0.5">{item.onHand} {item.unit}</dd></div><div><dt className="text-xs text-muted-foreground">Reorder point</dt><dd className="mt-0.5">{item.reorderPoint} {item.unit}</dd></div></dl>
+                  </article>)}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[560px] text-left">
+                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Product", "SKU", "On hand", "Reorder point", "Status"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
+                    <tbody>{data.lowStock.map((item) => (
+                      <tr key={item.productId} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
+                        <td className="px-3 py-3.5 text-sm"><Link href={`/products/${item.productId}`} className="font-medium text-primary hover:underline">{item.productName}</Link></td>
+                        <td className="px-3 py-3.5 font-mono text-sm text-muted-foreground">{item.sku}</td>
+                        <td className="px-3 py-3.5 text-sm tabular-nums">{item.onHand} {item.unit}</td>
+                        <td className="px-3 py-3.5 text-sm tabular-nums">{item.reorderPoint} {item.unit}</td>
+                        <td className="px-3 py-3.5 text-sm font-medium text-warning">{Number(item.onHand) === 0 ? "Out of stock" : "Low stock"}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                </>
+              )}
+            </RoutePanel>
           </div>
           <div className="mt-6">
             <RoutePanel title="Recent operations" description="The latest receipts, deliveries, transfers, and adjustments matching your filters.">
@@ -238,12 +237,20 @@ export function DashboardClient() {
                   <p className="mt-1 text-sm text-muted-foreground">{activeFilterCount > 0 ? "Try adjusting or clearing your filters." : "Operations will appear here as activity is recorded."}</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                <div className="grid gap-3 md:hidden">
+                  {operations.map((operation) => <Link key={operation.id} href={operationHref(operation)} className="rounded-lg border border-border p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <div className="flex items-start justify-between gap-3"><span className="truncate font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></div>
+                    <p className="mt-1 text-xs text-muted-foreground">{typeLabel(operation.type)} · {formatDate(operation.scheduleDate ?? operation.schedule_date)}</p>
+                    <dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">Contact</dt><dd className="truncate">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</dd></div><div><dt className="text-xs text-muted-foreground">Responsible</dt><dd className="truncate">{operation.createdByName ?? operation.responsibleUser ?? "—"}</dd></div></dl>
+                  </Link>)}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full min-w-[850px] text-left">
                     <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled", "Status", "Responsible"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
                     <tbody>{operations.map((operation) => (
                       <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
-                        <td className="px-3 py-3.5 font-mono text-sm font-medium">{operation.reference}</td>
+                        <td className="px-3 py-3.5 font-mono text-sm font-medium"><Link className="text-primary hover:underline" href={operationHref(operation)}>{operation.reference}</Link></td>
                         <td className="px-3 py-3.5 text-sm">{typeLabel(operation.type)}</td>
                         <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</td>
                         <td className="px-3 py-3.5 text-sm text-muted-foreground">{formatDate(operation.scheduleDate ?? operation.schedule_date)}</td>
@@ -253,6 +260,7 @@ export function DashboardClient() {
                     ))}</tbody>
                   </table>
                 </div>
+                </>
               )}
             </RoutePanel>
           </div>
@@ -260,4 +268,9 @@ export function DashboardClient() {
       ) : null}
     </RouteScaffold>
   );
+}
+
+function operationHref(operation: DashboardOperation) {
+  const path = ({ receipt: "receipts", delivery: "deliveries", transfer: "transfers", adjustment: "adjustments" } as Record<string, string>)[operation.type];
+  return path ? `/operations/${path}/${operation.id}` : "/dashboard";
 }

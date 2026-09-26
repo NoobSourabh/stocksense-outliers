@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, Save } from "lucide-react";
@@ -12,19 +12,20 @@ import { Input } from "@/components/ui/input";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { StatusBadge } from "@/components/status-badge";
 
-export type OperationKind = "receipts" | "deliveries" | "adjustments";
-const TYPE = { receipts: "receipt", deliveries: "delivery", adjustments: "adjustment" } as const;
-const LABEL = { receipts: "Receipt", deliveries: "Delivery", adjustments: "Adjustment" } as const;
+export type OperationKind = "receipts" | "deliveries" | "adjustments" | "transfers";
+const TYPE = { receipts: "receipt", deliveries: "delivery", adjustments: "adjustment", transfers: "transfer" } as const;
+const LABEL = { receipts: "Receipt", deliveries: "Delivery", adjustments: "Adjustment", transfers: "Transfer" } as const;
 
 export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mode: "new" | "detail"; id?: string }) {
   const type = TYPE[kind];
   const label = LABEL[kind];
+  const usesPartner = type === "receipt" || type === "delivery";
   const router = useRouter();
   const queryClient = useQueryClient();
   const operation = useQuery({ queryKey: ["operation", id], queryFn: () => stockApi.operation(id!), enabled: mode === "detail" && !!id });
   const products = useQuery({ queryKey: ["products", "choices"], queryFn: () => stockApi.products() });
   const warehouses = useQuery({ queryKey: ["warehouses", true], queryFn: () => stockApi.warehouses(true) });
-  const partners = useQuery({ queryKey: ["partners", type === "receipt" ? "supplier" : "customer"], queryFn: () => stockApi.partners(type === "receipt" ? "supplier" : "customer"), enabled: type !== "adjustment" });
+  const partners = useQuery({ queryKey: ["partners", type === "receipt" ? "supplier" : "customer"], queryFn: () => stockApi.partners(type === "receipt" ? "supplier" : "customer"), enabled: usesPartner });
   const [productId, setProductId] = useState("");
   const [locationId, setLocationId] = useState("");
   const [partnerId, setPartnerId] = useState("");
@@ -32,6 +33,17 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
   const [reason, setReason] = useState("");
   const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().slice(0, 10));
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (mode !== "new" || type !== "adjustment") return;
+    const params = new URLSearchParams(window.location.search);
+    const initialProductId = params.get("productId");
+    const initialLocationId = params.get("locationId");
+    const initialCount = params.get("countedQuantity");
+    if (initialProductId) setProductId(initialProductId);
+    if (initialLocationId) setLocationId(initialLocationId);
+    if (initialCount !== null) setQuantity(initialCount);
+  }, [mode, type]);
 
   const create = useMutation({
     mutationFn: () => stockApi.createOperation({
@@ -61,8 +73,8 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
   const allLocations = warehouses.data?.items.flatMap((warehouse) => warehouse.locations?.map((location) => ({ ...location, warehouseName: warehouse.name })) ?? []) ?? [];
   const selectedProduct = products.data?.items.find((item) => item.id === productId);
   const data = operation.data;
-  const isLoading = mode === "detail" ? operation.isPending : products.isPending || warehouses.isPending || (type !== "adjustment" && partners.isPending);
-  const loadError = mode === "detail" ? operation.isError : products.isError || warehouses.isError || (type !== "adjustment" && partners.isError);
+  const isLoading = mode === "detail" ? operation.isPending : products.isPending || warehouses.isPending || (usesPartner && partners.isPending);
+  const loadError = mode === "detail" ? operation.isError : products.isError || warehouses.isError || (usesPartner && partners.isError);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,7 +84,7 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
 
   return <RouteScaffold section={`Operations / ${label}`} title={mode === "new" ? `New ${label.toLowerCase()}` : `${label} ${data?.reference ?? ""}`} description={mode === "new" ? `Create and schedule a ${label.toLowerCase()}.` : "Review the operation, then move it through the stock workflow."}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <Link href={`/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to {kind}</Link>
+      <Link href={kind === "transfers" ? "/moves" : `/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> {kind === "transfers" ? "Back to move history" : `Back to ${kind}`}</Link>
       {data && <StatusBadge status={data.status} />}
     </div>
     {isLoading ? <p className="py-12 text-center text-sm text-muted-foreground" role="status">Loading operation details…</p>

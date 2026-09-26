@@ -249,6 +249,7 @@ class OperationLineResponse(CamelModel):
     product_id: str = Field(alias="productId")
     product_name: str = Field(alias="productName")
     product_sku: str = Field(alias="productSku")
+    partner_name: str | None = Field(None, alias="partnerName")
     quantity: str
     counted_quantity: str | None = Field(None, alias="countedQuantity")
     previous_quantity: str | None = Field(None, alias="previousQuantity")
@@ -349,6 +350,8 @@ class DashboardResponse(CamelModel):
     delivery_summary: DeliverySummaryResponse = Field(alias="deliverySummary")
     low_stock: list[LowStockItem] = Field(alias="lowStock")
     recent_operations: list[OperationSummaryResponse] = Field(alias="recentOperations")
+    active_product_count: int = Field(alias="activeProductCount")
+    scheduled_transfers: int = Field(alias="scheduledTransfers")
 
 
 # ---------------------------------------------------------------------------

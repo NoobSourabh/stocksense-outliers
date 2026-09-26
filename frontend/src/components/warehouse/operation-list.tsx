@@ -24,6 +24,12 @@ const OPEN_STATUSES = {
   adjustments: ["draft", "ready"],
 } as const;
 
+const STATUSES = {
+  receipts: ["draft", "ready", "done", "canceled"],
+  deliveries: ["draft", "waiting", "ready", "done", "canceled"],
+  adjustments: ["draft", "ready", "done", "canceled"],
+} as const;
+
 export function OperationList({ kind }: { kind: keyof typeof CONFIG }) {
   return (
     <Suspense fallback={
@@ -40,7 +46,9 @@ export function OperationList({ kind }: { kind: keyof typeof CONFIG }) {
 
 function OperationListContentWrapper({ kind }: { kind: keyof typeof CONFIG }) {
   const searchParams = useSearchParams();
-  const statusParam = searchParams.get("status") ?? "";
+  const requestedStatus = searchParams.get("status") ?? "";
+  const validStatuses: readonly string[] = STATUSES[kind];
+  const statusParam = requestedStatus === "open" || validStatuses.includes(requestedStatus) ? requestedStatus : "";
   return <OperationListContent key={`${kind}-${statusParam}`} kind={kind} initialStatus={statusParam} />;
 }
 
@@ -68,13 +76,13 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Reference or contact" aria-label="Search operations" className="h-10 pl-9" />
           </label>
-          <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
-            <option value="">All statuses</option>
-            <option value="open">Open</option>
-            {["draft", "waiting", "ready", "done", "canceled"].map((value) => (
-              <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>
+          <div className="flex min-w-0 flex-wrap gap-2" role="group" aria-label="Filter by status">
+            {[{ value: "", label: "All" }, { value: "open", label: "Open" }, ...STATUSES[kind].map((value) => ({ value, label: value[0].toUpperCase() + value.slice(1) }))].map((filter) => (
+              <Button key={filter.value || "all"} type="button" size="sm" variant={status === filter.value ? "secondary" : "outline"} aria-pressed={status === filter.value} onClick={() => setStatus(filter.value)}>
+                {filter.label}
+              </Button>
             ))}
-          </select>
+          </div>
           <Link href={`/operations/${kind}/new`}>
             <Button><Plus /> New {kind === "adjustments" ? "adjustment" : kind.slice(0, -1)}</Button>
           </Link>
@@ -89,11 +97,12 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
         ) : operations.data.items.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">No operations match these filters.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[650px] text-left">
+          <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[1050px] text-left">
               <thead>
                 <tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  {["Reference", "Contact", "Schedule date", "Lines", "Status", "Responsible"].map((label) => (
+                  {["Reference", "Contact", "Source", "Destination", "Schedule date", "Lines", "Status", "Responsible"].map((label) => (
                     <th key={label} className="px-3 py-3 font-medium">{label}</th>
                   ))}
                 </tr>
@@ -105,6 +114,8 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
                       <Link className="font-medium text-primary hover:underline" href={`/operations/${kind}/${operation.id}`}>{operation.reference}</Link>
                     </td>
                     <td className="px-3 py-3 text-sm">{operation.partnerName ?? "—"}</td>
+                    <td className="px-3 py-3 text-sm">{operation.sourceLocationName ?? "—"}</td>
+                    <td className="px-3 py-3 text-sm">{operation.destinationLocationName ?? "—"}</td>
                     <td className="px-3 py-3 text-sm">{operation.scheduleDate ?? "—"}</td>
                     <td className="px-3 py-3 text-sm">{operation.lineCount ?? operation.lines?.length ?? "—"}</td>
                     <td className="px-3 py-3"><StatusBadge status={operation.status} /></td>
@@ -114,8 +125,31 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
               </tbody>
             </table>
           </div>
+          <div className="grid gap-3 md:hidden">
+            {operations.data.items.map((operation: Operation) => (
+              <Link key={operation.id} href={`/operations/${kind}/${operation.id}`} className="rounded-lg border border-border p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <span className="truncate font-mono text-sm font-medium text-primary">{operation.reference}</span>
+                  <StatusBadge status={operation.status} />
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  <ListField label="Contact" value={operation.partnerName ?? "—"} />
+                  <ListField label="Schedule date" value={operation.scheduleDate ?? "—"} />
+                  <ListField label="Source" value={operation.sourceLocationName ?? "—"} />
+                  <ListField label="Destination" value={operation.destinationLocationName ?? "—"} />
+                  <ListField label="Lines" value={String(operation.lineCount ?? operation.lines?.length ?? "—")} />
+                  <ListField label="Responsible" value={operation.createdByName ?? "—"} />
+                </dl>
+              </Link>
+            ))}
+          </div>
+          </>
         )}
       </RoutePanel>
     </RouteScaffold>
   );
+}
+
+function ListField({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="truncate">{value}</dd></div>;
 }

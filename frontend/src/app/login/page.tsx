@@ -27,7 +27,7 @@ export default function LoginPage() {
     { label: "At least 8 characters", met: password.length >= 8 },
     { label: "One uppercase letter", met: /[A-Z]/.test(password) },
     { label: "One lowercase letter", met: /[a-z]/.test(password) },
-    { label: "One symbol", met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+    { label: "One symbol", met: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/`~;']/.test(password) },
   ];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +35,7 @@ export default function LoginPage() {
     const values = new FormData(event.currentTarget);
     const password = String(values.get("password") ?? "");
     if (isSignup) {
-      if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/`~;']/.test(password)) {
         setNotice("Use at least 8 characters, with uppercase, lowercase, and a symbol.");
         return;
       }
@@ -53,13 +53,18 @@ export default function LoginPage() {
     setNotice("");
     try {
       const result = isSignup
-        ? await stockApi.signup({ loginId, name: loginId, email: String(values.get("email") ?? "").trim(), password, confirmPassword: String(values.get("confirmPassword") ?? "") })
+        ? await stockApi.signup({ loginId, name: String(values.get("name") ?? "").trim(), email: String(values.get("email") ?? "").trim(), password, confirmPassword: String(values.get("confirmPassword") ?? "") })
         : await stockApi.login(loginId, password);
       queryClient.setQueryData(["auth", "me"], result);
       router.replace("/dashboard");
       router.refresh();
     } catch (error) {
-      setNotice(error instanceof ApiError ? error.message : "Unable to connect to StockSense. Please try again.");
+      if (error instanceof ApiError) {
+        const invalidCredentials = !isSignup && error.status === 401 && error.message.startsWith("Invalid Login Id or Password");
+        setNotice(invalidCredentials ? "Invalid Login Id or Password." : error.message);
+      } else {
+        setNotice("Unable to connect to StockSense. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -82,7 +87,7 @@ export default function LoginPage() {
         </header>
 
         <Card className="gap-0 rounded-2xl border border-border p-5 shadow-sm sm:p-8">
-          <div className="mb-6 grid grid-cols-2 rounded-lg bg-muted p-1" role="tablist" aria-label="Account access">
+          <div className="mb-6 grid grid-cols-2 rounded-lg bg-muted p-1" role="group" aria-label="Account access">
             {(["signin", "signup"] as const).map((tab) => (
               <Button
                 key={tab}
@@ -98,6 +103,16 @@ export default function LoginPage() {
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {isSignup && (
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Full name</Label>
+                <div className="relative">
+                  <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                  <Input id="name" name="name" required maxLength={255} autoComplete="name" placeholder="Your name" className="h-11 rounded-lg bg-background pl-10 pr-3 text-sm" />
+                </div>
+              </div>
+            )}
+
             {isSignup && (
               <div className="space-y-1.5">
                 <Label htmlFor="login-id">Login ID</Label>
@@ -132,7 +147,7 @@ export default function LoginPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="password">Password</Label>
-                {!isSignup && <Button type="button" variant="link" size="xs" onClick={() => setNotice("Password recovery instructions will be sent to your registered email.")} className="h-auto p-0 text-xs font-medium">Forgot password?</Button>}
+                {!isSignup && <Button type="button" variant="link" size="xs" onClick={() => setNotice("Password recovery is not available yet.")} className="h-auto p-0 text-xs font-medium">Forgot password?</Button>}
               </div>
               <div className="relative">
                 <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />

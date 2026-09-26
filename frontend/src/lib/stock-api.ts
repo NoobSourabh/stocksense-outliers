@@ -13,8 +13,8 @@ export interface ProductInput { name: string; sku: string; categoryId: string; u
 export interface OperationLine { id: string; productId: string; productName: string; productSku: string; quantity: string; countedQuantity?: string | null; previousQuantity?: string | null; delta?: string | null; reason?: string | null; isShort: boolean }
 export interface Operation { id: string; reference: string; type: string; status: string; partnerId?: string | null; partnerName?: string | null; sourceLocationId?: string | null; sourceLocationName?: string | null; destinationLocationId?: string | null; destinationLocationName?: string | null; scheduleDate?: string | null; note?: string | null; createdByName?: string; createdAt?: string; lineCount?: number; isLate: boolean; lines?: OperationLine[] }
 export interface OperationInput { type: string; partnerId?: string | null; sourceLocationId?: string | null; destinationLocationId?: string | null; scheduleDate?: string | null; note?: string | null; lines: { productId: string; quantity: string; countedQuantity?: string; reason?: string }[] }
-export interface StockMove { id: string; operationId: string; reference: string; type: string; productId: string; productName: string; productSku: string; fromLocationName?: string | null; toLocationName?: string | null; quantity: string; signedDelta: string; actorName: string; reason?: string | null; occurredAt: string }
-export interface Dashboard { receiptSummary: { toReceive: number; late: number; total: number }; deliverySummary: { toDeliver: number; late: number; waiting: number; total: number }; lowStock: { productId: string; productName: string; sku: string; onHand: string; reorderPoint: string; unit: string }[]; recentOperations: Operation[]; activeProductCount?: number; scheduledTransfers?: number }
+export interface StockMove { id: string; operationId: string; reference: string; type: string; productId: string; productName: string; productSku: string; partnerName?: string | null; fromLocationName?: string | null; toLocationName?: string | null; quantity: string; signedDelta: string; actorName: string; reason?: string | null; occurredAt: string }
+export interface Dashboard { receiptSummary: { toReceive: number; late: number; total: number }; deliverySummary: { toDeliver: number; late: number; waiting: number; total: number }; lowStock: { productId: string; productName: string; sku: string; onHand: string; reorderPoint: string; unit: string }[]; recentOperations: Operation[]; activeProductCount: number; scheduledTransfers: number }
 export interface OperationFilters {
   type?: string;
   status?: string;
@@ -52,5 +52,5 @@ export const stockApi = {
   operation: (id: string) => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}`, { auth: true }),
   createOperation: (body: OperationInput) => apiFetch<Operation>("/operations", { method: "POST", body, auth: true }),
   operationAction: (id: string, action: "ready" | "validate" | "cancel") => apiFetch<Operation>(`/operations/${encodeURIComponent(id)}/${action}`, { method: "POST", auth: true }),
-  moves: (filters: { type?: string; search?: string } = {}) => apiFetch<Page<StockMove>>(`/moves${queryString(filters)}`, { auth: true }),
+  moves: (filters: { type?: string; productId?: string; locationId?: string; fromDate?: string; toDate?: string; search?: string; limit?: number } = {}) => apiFetch<Page<StockMove>>(`/moves${queryString(filters)}`, { auth: true }),
 };
