@@ -50,7 +50,7 @@ async def signup_route(
 ) -> AuthResponse:
     user, token = await signup(db, body.login_id, body.name, body.email, body.password)
     _set_cookie(response, token)
-    return AuthResponse(user=_user_response(user))
+    return AuthResponse(user=_user_response(user), token=token)
 
 
 @router.post("/login")
@@ -61,7 +61,7 @@ async def login_route(
 ) -> AuthResponse:
     user, token = await login(db, body.login_id, body.password)
     _set_cookie(response, token)
-    return AuthResponse(user=_user_response(user))
+    return AuthResponse(user=_user_response(user), token=token)
 
 
 @router.post("/logout")

@@ -9,14 +9,14 @@
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-- **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Not yet wired to a real backend** — local validation only.
+- **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Ready to wire to live backend auth endpoints** (SOUR-004 unblocked).
+- **Backend core is live**: FastAPI + asyncpg + SQLAlchemy 2 + Neon PostgreSQL connected. Alembic migrations up to head, seed data present.
+- **Single Source of Truth API Contract**: `docs/API_CONTRACT.md` extracted and frozen per `v2blueprint.md` Part 11.
+- **Auth & Session System verified**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with bcrypt, HttpOnly cookies (`SameSite=Lax`), and Bearer token fallback. Full test suite passing.
 - **P0 list routes scaffolded**: `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts|deliveries|adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile` — all render with `RouteScaffold` + mock tables/forms.
 - **Dashboard UI built (demo mode)**: KPI cards, URL-synced filter bar, recent operations table; tries `GET /dashboard` and falls back to sample data when backend is down.
 - **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
 - **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
-- **API client ready**: `lib/api.ts` + types/constants exist; dashboard already uses `apiFetch`. Auth wiring (SOUR-004) can start as soon as Kunal lands endpoints.
-- **No backend folder exists yet**: Kunal needs to scaffold FastAPI/Postgres/backend core immediately.
-- **No** `docs/API_CONTRACT.md` **exists yet**: contract is only inside `v2blueprint.md`.
 - **Operation routes present**: receipts, deliveries, and adjustments each have `new` and `[id]` views with demo-local ready/validate/cancel interactions.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
@@ -127,47 +127,23 @@
 
 - [x] **KUN-001 · Stack decision** — locked Next.js frontend + FastAPI backend + PostgreSQL database per `v2blueprint.md`
 - [x] **KUN-002 · Problem analysis** — re-read problem statement, flagged constraints and risky assumptions (Odoo-native vs standalone)
-
-
 - [x] **KUN-003 · Create `feature/kunal/backend-core` branch** — branched from `main`, active working branch
 - [x] **KUN-004 · Scaffold FastAPI project** — `backend/` folder scaffolded with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/` matching v2 blueprint
 - [x] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 + asyncpg against Neon PostgreSQL, Alembic migrations initialized and upgraded to head, seed data verified
 - [x] **KUN-006 · Create `.env.example`** — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
+- [x] **KUN-007 · Extract `docs/API_CONTRACT.md`** — comprehensive API contract extracted from `v2blueprint.md` Part 11, serving as frozen contract for team integration
+- [x] **KUN-008 · User model + migrations** — `users` table created with UUID PK, unique `login_id` (6-12 chars check constraint), unique `email` (lowercased), `password_hash`, `role` enum (`manager`, `staff`), and `is_active`
+  - *Test:* `tests/test_user_model.py` verifies model attributes, loginId length rules, and password complexity validation.
+- [x] **KUN-009 · Auth endpoints** — `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with cookie + Bearer token support
+  - *Test:* `tests/test_auth_api.py` verifies 201 signup + cookie, 409 conflict, 401 on bad password with exact message "Invalid Login Id or Password", and 200 on logout clearing cookie.
+- [x] **KUN-010 · Password hashing + JWT/session cookies** — bcrypt hashing with salt, signed JWTs with expiration, HttpOnly cookie with `SameSite=Lax`
+  - *Test:* Verified in `tests/test_auth_api.py` and `tests/test_user_model.py`. All 6 tests passing.
 
 ### In Progress 🔄
 
-*None — backend work has not started. KUN-003 should move to In Progress immediately.*
+- [-] **KUN-011 · Categories endpoint** & **KUN-012 · Warehouses + locations endpoints** — reference data and master data endpoints
 
 ### Todo 📋
-
-
-
-#### Must start now (next 60 minutes)
-
-- [ ] **KUN-003 · Create** `feature/kunal/backend-core` **branch**
-  - *Test:* Branch pushed to origin; PR opened from `main` later.
-- [ ] **KUN-004 · Scaffold FastAPI project** — `backend/` folder with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/`
-  - *Test:* `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload` starts without errors.
-- [ ] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 base, migrations, `DATABASE_URL` from env
-  - *Test:* `alembic upgrade head` runs against a fresh Postgres DB; `SELECT 1` from app returns 1.
-- [ ] **KUN-006 · Create** `.env.example` — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
-  - *Test:* No real secrets in repo; teammates can copy to `.env` and run locally.
-- [ ] **KUN-007 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
-- [-] **KUN-007 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
-  - *Test:* File exists and covers every P0 endpoint with method, path, auth, request, response, errors.
-
-
-
-#### Auth endpoints
-
-- [ ] **KUN-008 · User model + migrations** — `id`, `login_id` (6–12, unique), `name`, `email_ci` (unique), `password_hash`, `role`, `is_active`
-  - *Test:* Migration creates table; unique constraints enforced.
-- [ ] **KUN-009 · Auth endpoints** — `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
-  - *Test:* Signup returns 201 and sets cookie; login returns 200; invalid credentials return 401 with "Invalid Login Id or Password"; `/auth/me` requires auth.
-- [ ] **KUN-010 · Password hashing + JWT/session cookies** — bcrypt/Argon2, HttpOnly cookie, `SameSite=Lax`
-  - *Test:* Hashed password never returned; cookie set on login, cleared on logout.
-
-
 
 #### Reference data endpoints
 
@@ -329,13 +305,11 @@
 
 ## Active Blockers
 
-1. **No backend exists** — Kunal must start `feature/kunal/backend-core` (KUN-003) immediately. Blocks SOUR-004 and all live API wiring.
-2. **No** `docs/API_CONTRACT.md` — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
-3. **Auth page not wired to API** — waiting on Kunal's auth endpoints (KUN-008–KUN-010). UI + `apiFetch` client are ready.
-4. **Backend is absent from this checkout** — live auth, products, operations, settings, ledger, and dashboard data need Kunal's API endpoints.
+1. **None for Auth / Contract**: `docs/API_CONTRACT.md` is frozen, and backend auth endpoints (`/auth/signup`, `/auth/login`, `/auth/logout`, `/auth/me`) are live with verified session cookies. Sourabh can immediately wire SOUR-004 (`/login`).
+2. **Settings & Product CRUD wiring**: Sourabh's remaining pages (SOUR-005 to SOUR-011) await completion of KUN-011–KUN-015 endpoints.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 (frontend route and scaffold follow-up)*
-*Completed: SOUR-003 route gaps, location detail route, SOUR-015 auth component kit, operation create/detail scaffolds, and local product search.*
-*Next available work is API integration after the backend endpoints land.*
+*Last updated: Saturday, Sep 26, 2026 (Backend core, API contract, and Auth verification)*
+*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies with full test suite passing).*
+*Next available work: Sourabh to wire SOUR-004 to live auth; Kunal to deliver Reference Data & Products CRUD (KUN-011–KUN-015).*
