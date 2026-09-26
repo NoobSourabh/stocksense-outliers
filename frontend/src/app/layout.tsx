@@ -18,9 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nova Precision - Authentication | Identity Portal",
-  description:
-    "Single sign-on and high-assurance credential authentication architecture.",
+  title: "StockSense | Warehouse Location Details",
+  description: "Warehouse location, storage-bin hierarchy, and facility status management.",
 };
 
 export default function RootLayout({

@@ -5,83 +5,130 @@
 
 ---
 
-## Current State Snapshot (as of 10:45 AM, main branch)
+## Current State Snapshot (as of 11:25 AM, main branch)
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-- **Auth page built at `/`**: Sign-in / sign-up form with Login ID (6–12 chars), email, password complexity rules, error notice, theme toggle, responsive layout. **Not yet wired to a real backend** — it only shows toasts and local state.
+- **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Not yet wired to a real backend** — local validation only.
+- **P0 list routes scaffolded**: `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts|deliveries|adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile` — all render with `RouteScaffold` + mock tables/forms.
+- **Dashboard UI built (demo mode)**: KPI cards, URL-synced filter bar, recent operations table; tries `GET /dashboard` and falls back to sample data when backend is down.
+- **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
+- **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
+- **API client ready**: `lib/api.ts` + types/constants exist; dashboard already uses `apiFetch`. Auth wiring (SOUR-004) can start as soon as Kunal lands endpoints.
 - **No backend folder exists yet**: Kunal needs to scaffold FastAPI/Postgres/backend core immediately.
-- **No `docs/API_CONTRACT.md` exists yet**: contract is only inside `v2blueprint.md`.
-- **Hardik has a WIP design branch** (`origin/feat/design-hardik`) with a stock-inventory page replacing the auth page; not merged to `main`.
+- **No** `docs/API_CONTRACT.md` **exists yet**: contract is only inside `v2blueprint.md`.
+- **Operation routes present**: receipts, deliveries, and adjustments each have `new` and `[id]` views with demo-local ready/validate/cancel interactions.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
 ---
 
+
+
 ## Team Roster
 
-| Member | Primary lane | Must not do |
-|---|---|---|
-| **Sourabh** | React/Next.js pages, routing, API integration, demo click-path, responsive layouts | Backend logic, database models, deployment |
-| **Kunal** | Python API, business logic, auth, database schema/migrations, seed data, deployment | UI components, frontend pages, visual QA |
-| **Hardik** | Shared UI kit, loading/empty/error states, component quality, QA/bug bash, demo testing/video | Backend endpoints, DB design, infra provisioning |
+
+| Member      | Primary lane                                                                                  | Must not do                                      |
+| ----------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Sourabh** | React/Next.js pages, routing, API integration, demo click-path, responsive layouts            | Backend logic, database models, deployment       |
+| **Kunal**   | Python API, business logic, auth, database schema/migrations, seed data, deployment           | UI components, frontend pages, visual QA         |
+| **Hardik**  | Shared UI kit, loading/empty/error states, component quality, QA/bug bash, demo testing/video | Backend endpoints, DB design, infra provisioning |
+
 
 ---
 
+
+
 ## Sourabh — Frontend Lead / Pages
+
+
 
 ### Completed ✅
 
 - [x] **SOUR-001 · Frontend scaffold boot** — confirm `npm run dev` runs and dependencies install cleanly
   - *Test:* `cd frontend && npm install && npm run dev` boots in < 30 s.
-- [x] **SOUR-002 · Auth UI page** — build sign-in / sign-up page at `/` with Login ID, email, password complexity rules, error notice, theme toggle, responsive layout
-  - *Test:* Form validates on client; error notice shows "Invalid Login Id or Password"; mobile and desktop layouts render.
+- [x] **SOUR-002 · Auth UI page** — sign-in / sign-up at `/login` with Login ID, email, password complexity rules, error notice, responsive layout
+  - *Test:* Form validates on client; mobile and desktop layouts render.
+  - *Note:* Originally at `/`; moved to `/login` when warehouse UI took `/`.
+
+
 
 ### In Progress 🔄
 
-- [-] **SOUR-003 · Route scaffolding** — create route shells for `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts`, `/operations/deliveries`, `/operations/adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile`
-  - *Test:* `next dev` serves every route without 404.
-  - *Blocked on:* agreed page structure from `v2blueprint.md`.
-- [-] **SOUR-004 · Wire auth page to real API** — replace local toasts with calls to `/auth/login`, `/auth/signup`, `/auth/me`, `/auth/logout`
+- [x] **SOUR-003 · Route scaffolding** — P0 route shells and operation detail/new routes are present
+  - *Done:* `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts`, `/operations/deliveries`, `/operations/adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile`
+  - *Done:* operation `new` + `[id]` routes (×3 types); `/` redirects to `/login`; `/stock` route resolves; location detail moved to `/settings/locations/[id]`.
+  - *Test:* `next dev` serves every P0 route without 404; nav links all resolve.
+- [-] **SOUR-004 · Wire auth page to real API** — replace local notices with calls to `/auth/login`, `/auth/signup`, `/auth/me`, `/auth/logout`
   - *Test:* Sign in with demo credentials navigates to `/dashboard`; 401 redirects to `/login`.
-  - *Blocked on:* Kunal's auth endpoints (KUN-006–KUN-008).
+  - *Ready:* `lib/api.ts`, types, toast utils exist — only blocked on Kunal's auth endpoints (KUN-008–KUN-010).
+- [-] **SOUR-005 · Dashboard page** — UI built with KPI cards, filter bar (URL query sync), recent operations; demo fallback when API unavailable
+  - *Remaining:* wire to live `/dashboard` once KUN-020 lands; remove demo banner in production path.
+  - *Test:* KPIs match backend `/dashboard`; filters update URL query state and operation list.
+- [-] **SOUR-006 · Products page** — list + new + detail scaffold pages with local product search
+  - *Remaining:* real CRUD, per-location On Hand / Free-to-Use from API.
+  - *Blocked on:* Kunal's `/products` CRUD endpoints (KUN-014–KUN-015).
+- [-] **SOUR-007 · Receipts page** — list, create, and detail screens with demo-local ready/validate/cancel flow
+  - *Remaining:* connect operation screens to API and post stock changes.
+  - *Blocked on:* Kunal's `/operations` receipt endpoints (KUN-016–KUN-018).
+- [-] **SOUR-008 · Deliveries page** — list, create, and detail screens with under-covered line warning and demo-local actions
+  - *Remaining:* connect operation screens to API and post stock changes.
+  - *Blocked on:* Kunal's delivery endpoints + free-to-use calculation (KUN-015–KUN-018).
+- [-] **SOUR-009 · Adjustments page** — list, create, and detail screens with physical count/reason inputs and demo-local actions
+  - *Remaining:* connect operation screens to API and calculate/post adjustment deltas.
+  - *Blocked on:* Kunal's adjustment endpoints (KUN-016–KUN-018).
+- [-] **SOUR-010 · Move history / ledger page** — list scaffold with mock ledger rows
+  - *Remaining:* inbound green / outbound red styling from real data; pagination.
+  - *Blocked on:* Kunal's `/moves` ledger endpoint (KUN-019).
+- [-] **SOUR-011 · Settings pages (P1)** — warehouse + location list scaffolds with mock tables; location detail is at `/settings/locations/[id]`
+  - *Remaining:* CRUD forms wired to API.
+  - *Blocked on:* Kunal's `/warehouses` and `/locations` endpoints (KUN-012).
+
+
 
 ### Todo 📋
 
-- [ ] **SOUR-005 · Dashboard page** — KPI cards (receipt/delivery summaries, low stock, scheduled transfers), recent operations list, filter bar
-  - *Test:* KPIs match backend `/dashboard`; filters update URL query state and operation list.
-  - *Blocked on:* Kunal's `/dashboard` endpoint (KUN-017).
-- [ ] **SOUR-006 · Products page** — list/search/create/edit with SKU, category, unit, cost, reorder point; show On Hand / Free-to-Use per location
-  - *Test:* Create product → appears in list → detail shows per-location stock.
-  - *Blocked on:* Kunal's `/products` CRUD endpoints (KUN-011–KUN-012).
-- [ ] **SOUR-007 · Receipts page** — list view with search/filter, create/detail view, "Mark as Ready", validate flow
-  - *Test:* Validate receipt increases destination stock and creates ledger row.
-  - *Blocked on:* Kunal's `/operations` receipt endpoints (KUN-013–KUN-016).
-- [ ] **SOUR-008 · Deliveries page** — list view, create/detail, "Pick/Pack → Ready", validate flow, red-flag under-covered lines
-  - *Test:* Insufficient free-to-use stock keeps line red and operation in `waiting`; validation decrements source stock.
-  - *Blocked on:* Kunal's delivery endpoints + free-to-use calculation (KUN-012–KUN-016).
-- [ ] **SOUR-009 · Adjustments page** — physical count form with reason, calculated delta, validate flow reachable from stock list
-  - *Test:* Count update sets balance and records old/new/delta/reason in ledger.
-  - *Blocked on:* Kunal's adjustment endpoints (KUN-013–KUN-016).
-- [ ] **SOUR-010 · Move history / ledger page** — list view with reference, type, product, quantity, from/to, actor, time; inbound green, outbound red
-  - *Test:* Every validated operation appears here as one row per line.
-  - *Blocked on:* Kunal's `/moves` ledger endpoint (KUN-016).
-- [ ] **SOUR-011 · Settings pages (P1)** — warehouse and location CRUD
-  - *Test:* Create/edit warehouse and location; short codes unique in scope.
-  - *Blocked on:* Kunal's `/warehouses` and `/locations` endpoints (KUN-009–KUN-010).
 - [ ] **SOUR-012 · Responsive + demo click-path polish** — ensure all P0 pages work at 390px and 1440px; no overflow
   - *Test:* Open every P0 page at both widths; all actions reachable.
 - [ ] **SOUR-013 · Remove console.logs, TODOs, placeholder copy** before feature freeze
   - *Test:* `grep -R "TODO\|FIXME\|console.log\|lorem ipsum" frontend/src/app frontend/src/components` returns nothing demo-facing.
+- [ ] **SOUR-014 · Auth guard + redirect logic** — unauthenticated users → `/login`; authenticated `/login` → `/dashboard`; protect `(app)` routes
+  - *Test:* Direct visit to `/dashboard` without session redirects to `/login`.
+- [x] **SOUR-015 · Replace raw inputs with UI kit on auth page** — use `Button`, `Input`, `Card`, `Label` from `@/components/ui/*` (HAR-006 overlap)
+  - *Test:* `/login` imports kit components; no raw `<button>`/`<input>` for primary controls.
+
+
+
+### Sourabh — Expanded next steps (priority order)
+
+| # | Task | Est. | Can start now? | Depends on |
+| --- | --- | --- | --- | --- |
+| 1 | **Finish SOUR-003 gaps** — add 6 operation sub-routes, redirect `/` → `/login`, and provide `/stock` | Done | ✅ | — |
+| 2 | **Move location UI** — relocate warehouse detail to `/settings/locations/[id]` | Done | ✅ | — |
+| 3 | **SOUR-014 auth guard** — middleware or layout check; redirect unauthenticated users | 20 min | ✅ Yes (cookie check stub OK until backend) | KUN-009 for real session |
+| 4 | **SOUR-004 wire login** — `POST /auth/login`, `POST /auth/signup`, store session, redirect to `/dashboard` | 30 min | ⏳ When backend up | KUN-008–KUN-010 |
+| 5 | **SOUR-015 kit-ify auth** — use shared `Button`/`Input`/`Card`/`Label` controls | Done | ✅ | — |
+| 6 | **Operation detail scaffolds** — create/detail screens, line table, under-stock warning, demo-local actions | Done | ✅ | — |
+| 7 | **Products list upgrade** — add local search and "New product" link | Done | ✅ | — |
+| 8 | **Wire dashboard live** — flip off demo fallback once `GET /dashboard` returns 200 | 10 min | ⏳ When backend up | KUN-020 |
+| 9 | **Wire products/operations/moves** — TanStack Query hooks per page | 2–3 hr | ⏳ When backend up | KUN-014–KUN-019 |
+| 10 | **SOUR-012 responsive pass** — 390px + 1440px on every route; fix table overflow | 30 min | After step 1 | — |
+| 11 | **SOUR-013 cleanup** — grep sweep before feature freeze @ 12:30 | 15 min | @ 12:15 | — |
 
 ---
 
+
+
 ## Kunal — Backend / Auth / Database / Infra
+
+
 
 ### Completed ✅
 
 - [x] **KUN-001 · Stack decision** — locked Next.js frontend + FastAPI backend + PostgreSQL database per `v2blueprint.md`
 - [x] **KUN-002 · Problem analysis** — re-read problem statement, flagged constraints and risky assumptions (Odoo-native vs standalone)
+
+
 - [x] **KUN-003 · Create `feature/kunal/backend-core` branch** — branched from `main`, active working branch
 - [x] **KUN-004 · Scaffold FastAPI project** — `backend/` folder scaffolded with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/` matching v2 blueprint
 - [x] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 + asyncpg against Neon PostgreSQL, Alembic migrations initialized and upgraded to head, seed data verified
@@ -89,8 +136,27 @@
 
 ### In Progress 🔄
 
+*None — backend work has not started. KUN-003 should move to In Progress immediately.*
+
+### Todo 📋
+
+
+
+#### Must start now (next 60 minutes)
+
+- [ ] **KUN-003 · Create** `feature/kunal/backend-core` **branch**
+  - *Test:* Branch pushed to origin; PR opened from `main` later.
+- [ ] **KUN-004 · Scaffold FastAPI project** — `backend/` folder with `main.py`, `core/`, `db/`, `models/`, `schemas/`, `api/`, `services/`, `repositories/`, `seed/`
+  - *Test:* `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload` starts without errors.
+- [ ] **KUN-005 · Set up PostgreSQL + Alembic** — async SQLAlchemy 2 base, migrations, `DATABASE_URL` from env
+  - *Test:* `alembic upgrade head` runs against a fresh Postgres DB; `SELECT 1` from app returns 1.
+- [ ] **KUN-006 · Create** `.env.example` — list `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` with fake values
+  - *Test:* No real secrets in repo; teammates can copy to `.env` and run locally.
+- [ ] **KUN-007 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
 - [-] **KUN-007 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
   - *Test:* File exists and covers every P0 endpoint with method, path, auth, request, response, errors.
+
+
 
 #### Auth endpoints
 
@@ -101,6 +167,8 @@
 - [ ] **KUN-010 · Password hashing + JWT/session cookies** — bcrypt/Argon2, HttpOnly cookie, `SameSite=Lax`
   - *Test:* Hashed password never returned; cookie set on login, cleared on logout.
 
+
+
 #### Reference data endpoints
 
 - [ ] **KUN-011 · Categories endpoint** — `GET /categories` (P1 create)
@@ -110,12 +178,16 @@
 - [ ] **KUN-013 · Partners endpoint** — `GET /partners?kind=&search=`
   - *Test:* Returns supplier/customer choices for operation forms.
 
+
+
 #### Products + balances
 
 - [ ] **KUN-014 · Products CRUD** — `GET /products`, `POST /products`, `GET /products/{id}`, `PATCH /products/{id}`, `GET /products/{id}/availability`
   - *Test:* Duplicate SKU returns 409; optional initial stock creates adjustment + ledger row.
 - [ ] **KUN-015 · StockBalance model + free-to-use calculation** — unique `(product_id, location_id)`, `on_hand_quantity >= 0`
   - *Test:* Free-to-use = on_hand − reserved by waiting/ready deliveries for same product/location.
+
+
 
 #### Operations + ledger
 
@@ -130,6 +202,8 @@
 - [ ] **KUN-020 · Dashboard aggregation endpoint** — `GET /dashboard` with receipt/delivery summaries, low stock, recent operations
   - *Test:* KPIs match underlying lists; isLate computed correctly.
 
+
+
 #### Seed + deploy
 
 - [ ] **KUN-021 · Deterministic seed script** — demo users Maya/Arjun, warehouses/locations, products with starting balances, one waiting delivery
@@ -141,7 +215,11 @@
 
 ---
 
+
+
 ## Hardik — UI Kit / QA / Testing
+
+
 
 ### Completed ✅
 
@@ -153,14 +231,16 @@
 - [x] **HAR-004 · Theme + responsive foundation** — dark/light mode toggle; responsive breakpoints active
   - *Test:* Toggle theme in auth page; resize window to 390px and 1440px.
 
+
+
 ### In Progress 🔄
 
-- [-] **HAR-005 · Stock inventory design branch** — `origin/feat/design-hardik` has a stock-inventory page replacing the auth page; needs reconciliation with `main`
-  - *Test:* Decide whether to merge as a separate route or keep auth page and add inventory as `/stock` or `/products`.
-  - *Blocked on:* team decision + Sourabh's route plan (SOUR-003).
-- [-] **HAR-006 · Wire UI kit into Sourabh's pages** — replace ad-hoc markup in auth page and future pages with kit components
-  - *Test:* `frontend/src/app/page.tsx` uses `Button`, `Input`, `Card` from kit instead of raw `<button>`/`<input>`.
-  - *Blocked on:* Sourabh's route shells (SOUR-003).
+- [-] **HAR-005 · Stock inventory design branch** — warehouse/location UI merged to `main` at `/`; auth moved to `/login`. Still need: location detail at `/settings/locations/[id]`, decide `/stock` vs `/products` for nav.
+  - *Test:* Nav links resolve; location detail reachable from settings list.
+- [-] **HAR-006 · Wire UI kit into Sourabh's pages** — dashboard + route scaffolds use `Button`, `StatusBadge`, `KpiCard`; auth page still uses raw `<button>`/`<input>`.
+  - *Test:* `/login` uses kit components; tracked as SOUR-015.
+
+
 
 ### Todo 📋
 
@@ -184,18 +264,24 @@
 
 ---
 
+
+
 ## Shared / Cross-Cutting
+
+
 
 ### Done ✅
 
 - [x] **SHR-001 · Problem selected: StockSense**
-- [x] **SHR-002 · `v2blueprint.md` created** with full P0/P1/P2 scope, domain model, API contract, architecture, seed scenario
+- [x] **SHR-002 ·** `v2blueprint.md` **created** with full P0/P1/P2 scope, domain model, API contract, architecture, seed scenario
 - [x] **SHR-003 · Frontend project scaffolded and running**
 - [x] **SHR-004 · Git repo initialized with origin remote**
 
+
+
 ### Todo 📋
 
-- [ ] **SHR-005 · Extract `docs/API_CONTRACT.md`** from `v2blueprint.md` Part 11
+- [ ] **SHR-005 · Extract** `docs/API_CONTRACT.md` from `v2blueprint.md` Part 11
   - *Owner:* Kunal or Sourabh
   - *Test:* Single source-of-truth contract file exists.
 - [ ] **SHR-006 · Create shared scratch doc** for Idea Document sections 1–11
@@ -214,6 +300,8 @@
   - Video uploaded/linked, deployed link tested incognito
 
 ---
+
+
 
 ## P0 Feature Dependency Chain
 
@@ -237,17 +325,17 @@
 
 ---
 
+
+
 ## Active Blockers
 
-1. **No backend exists** — Kunal must start `feature/kunal/backend-core` (KUN-003) immediately.
-2. **No `docs/API_CONTRACT.md`** — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
-3. **Auth page not wired to API** — waiting on Kunal's auth endpoints (KUN-008–KUN-010).
-4. **Hardik's design branch not reconciled** — decide whether the stock-inventory page replaces `/` or becomes `/stock`/`/products` (HAR-005).
+1. **No backend exists** — Kunal must start `feature/kunal/backend-core` (KUN-003) immediately. Blocks SOUR-004 and all live API wiring.
+2. **No** `docs/API_CONTRACT.md` — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
+3. **Auth page not wired to API** — waiting on Kunal's auth endpoints (KUN-008–KUN-010). UI + `apiFetch` client are ready.
+4. **Backend is absent from this checkout** — live auth, products, operations, settings, ledger, and dashboard data need Kunal's API endpoints.
 
 ---
 
-_Last updated: Saturday, Sep 26, 2026, 10:45 AM_  
-_Next actions:_
-_1. Kunal: start KUN-003 and scaffold FastAPI + PostgreSQL + Alembic + auth endpoints._
-_2. Sourabh: start SOUR-003 and add P0 route shells._
-_3. Anyone with 5 minutes: complete KUN-007 / SHR-005 and extract `docs/API_CONTRACT.md`._
+*Last updated: Saturday, Sep 26, 2026 (frontend route and scaffold follow-up)*
+*Completed: SOUR-003 route gaps, location detail route, SOUR-015 auth component kit, operation create/detail scaffolds, and local product search.*
+*Next available work is API integration after the backend endpoints land.*
