@@ -14,7 +14,9 @@ import { showCreateSuccessToast, showErrorToast } from "@/lib/toast-utils";
 export default function LocationsPage() {
   const queryClient = useQueryClient();
   const warehouses = useQuery({ queryKey: ["warehouses", true], queryFn: () => stockApi.warehouses(true) });
-  const [warehouseId, setWarehouseId] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState("");
+  const warehouseId =
+    selectedWarehouseId || (warehouses.data?.items.length === 1 ? warehouses.data.items[0].id : "");
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [kind, setKind] = useState("internal");
@@ -50,7 +52,7 @@ export default function LocationsPage() {
     setCode("");
     setName("");
     setKind("internal");
-    if ((warehouses.data?.items.length ?? 0) !== 1) setWarehouseId("");
+    if ((warehouses.data?.items.length ?? 0) !== 1) setSelectedWarehouseId("");
   }
 
   return <RouteScaffold section="Settings" title="Location" description="Organize warehouse space into rooms, racks, and shelves." hideHeading>
@@ -73,7 +75,7 @@ export default function LocationsPage() {
                 <Input value={code} onChange={(event) => setCode(event.target.value)} required maxLength={50} pattern=".*\\S.*" title="Enter a code with at least one non-space character." className="h-10 bg-background text-sm font-normal" />
               </label>
               <label className="grid min-w-0 gap-1.5 text-sm font-medium">Warehouse
-                <select required value={warehouseId} onChange={(event) => setWarehouseId(event.target.value)} disabled={warehouses.isPending || !warehouses.data?.items.length} className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal disabled:opacity-60">
+                <select required value={warehouseId} onChange={(event) => setSelectedWarehouseId(event.target.value)} disabled={warehouses.isPending || !warehouses.data?.items.length} className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal disabled:opacity-60">
                   <option value="">Select warehouse</option>{warehouses.data?.items.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} · {warehouse.name}</option>)}
                 </select>
               </label>
