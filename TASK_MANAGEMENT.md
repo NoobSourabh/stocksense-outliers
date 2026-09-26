@@ -9,28 +9,17 @@
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-<<<<<<< HEAD
 - **Auth page at** `/login`: Login/signup/logout use the backend's HttpOnly cookie session; `/auth/me` protects app routes.
+- **Backend core is live**: FastAPI + asyncpg + SQLAlchemy 2 + Neon PostgreSQL connected. Alembic migrations up to head, seed data present.
+- **Single Source of Truth API Contract**: `docs/API_CONTRACT.md` extracted and frozen per `v2blueprint.md` Part 11.
+- **Auth & Session System verified**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with bcrypt, HttpOnly cookies (`SameSite=Lax`), and Bearer token fallback. Full test suite passing.
 - **Inventory pages use FastAPI**: product search/create/edit/availability, operations list/create/transitions, stock balances, ledger, profile, and warehouse/location reads.
 - **Dashboard is live**: `/dashboard` supplies summary cards and `/operations` supplies URL-filtered recent operations; demo fallback remains for service failures.
 - **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
 - **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
 - **API client connected**: `lib/api.ts` routes requests through `/api/v1`, forwards the auth cookie, and the frontend now calls the available FastAPI endpoints.
-- **Backend is present**: auth, dashboard, product, operation, move, category, warehouse, location, and partner read endpoints are available.
-- **Backend contract gaps remain**: operations have no PATCH endpoint; warehouse/location write endpoints are not implemented; list APIs return a maximum of 50 rows without usable cursor pagination.
-- **No** `docs/API_CONTRACT.md` **exists yet**: contract is only inside `v2blueprint.md`.
 - **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state.
-=======
-- **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Ready to wire to live backend auth endpoints** (SOUR-004 unblocked).
-- **Backend core is live**: FastAPI + asyncpg + SQLAlchemy 2 + Neon PostgreSQL connected. Alembic migrations up to head, seed data present.
-- **Single Source of Truth API Contract**: `docs/API_CONTRACT.md` extracted and frozen per `v2blueprint.md` Part 11.
-- **Auth & Session System verified**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with bcrypt, HttpOnly cookies (`SameSite=Lax`), and Bearer token fallback. Full test suite passing.
-- **P0 list routes scaffolded**: `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts|deliveries|adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile` — all render with `RouteScaffold` + mock tables/forms.
-- **Dashboard UI built (demo mode)**: KPI cards, URL-synced filter bar, recent operations table; tries `GET /dashboard` and falls back to sample data when backend is down.
-- **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
-- **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
-- **Operation routes present**: receipts, deliveries, and adjustments each have `new` and `[id]` views with demo-local ready/validate/cancel interactions.
->>>>>>> main
+- **Backend contract gaps remaining**: operations have no PATCH endpoint; warehouse/location write endpoints are not implemented; list APIs return a maximum of 50 rows without usable cursor pagination.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -310,22 +299,11 @@
 
 ## Active Blockers
 
-<<<<<<< HEAD
 1. **Backend write APIs are incomplete** — operations have no PATCH; warehouse/location writes are not exposed; product initial stock is not posted.
-2. **No** `docs/API_CONTRACT.md` — extract from `v2blueprint.md` (KUN-007 / SHR-005) before frontend/backend integration.
+2. **Settings & Product CRUD wiring** — remaining pages await completion of KUN-011–KUN-015 endpoints.
 3. **Ledger pagination is limited** — the backend returns at most 50 rows and does not provide a usable cursor/offset.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 (Sourabh API integration follow-up)*
-*Available API integration is complete for auth, dashboard, products, operations, moves, profile, and settings reads. Remaining items require visual viewport review or backend write/pagination endpoints.*
-=======
-1. **None for Auth / Contract**: `docs/API_CONTRACT.md` is frozen, and backend auth endpoints (`/auth/signup`, `/auth/login`, `/auth/logout`, `/auth/me`) are live with verified session cookies. Sourabh can immediately wire SOUR-004 (`/login`).
-2. **Settings & Product CRUD wiring**: Sourabh's remaining pages (SOUR-005 to SOUR-011) await completion of KUN-011–KUN-015 endpoints.
-
----
-
-*Last updated: Saturday, Sep 26, 2026 (Backend core, API contract, and Auth verification)*
-*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies with full test suite passing).*
-*Next available work: Sourabh to wire SOUR-004 to live auth; Kunal to deliver Reference Data & Products CRUD (KUN-011–KUN-015).*
->>>>>>> main
+*Last updated: Saturday, Sep 26, 2026 (Frontend & Backend integration checkpoint)*
+*Available API integration is complete for auth, dashboard, products, operations, moves, profile, and settings reads. Frontend build is passing without lint errors or type issues.*
