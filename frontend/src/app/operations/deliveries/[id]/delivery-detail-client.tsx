@@ -15,11 +15,8 @@ import {
   ArrowLeft,
   AlertTriangle,
   Package,
-  Calendar,
   MapPin,
-  User,
   Barcode,
-  Truck,
   Sun,
   Moon,
   Bell,
@@ -32,9 +29,7 @@ import {
   Warehouse,
   Menu,
   ChevronRight,
-  Sparkles,
   Maximize2,
-  ExternalLink,
 } from "lucide-react";
 
 export interface DeliveryProductLine {
@@ -1371,7 +1366,7 @@ export function DeliveryDetailClient({ deliveryId }: { deliveryId: string }) {
                 <p className="text-xl font-bold font-mono text-slate-900 dark:text-white">
                   {totalWeightKg} <span className="text-xs font-normal text-slate-400">kg</span>
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5 font-mono">1.82 m³ total cargo</p>
+                <p className="text-xs text-slate-400 mt-0.5 font-mono">{totalUnits} units • 1.82 m³ total cargo</p>
               </div>
               <span className="px-2 py-0.5 text-[10px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded">
                 Standard Freight
