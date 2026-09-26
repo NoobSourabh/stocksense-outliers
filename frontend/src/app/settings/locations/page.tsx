@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { stockApi } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
@@ -20,11 +20,6 @@ export default function LocationsPage() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [kind, setKind] = useState("internal");
-  useEffect(() => {
-    if (!warehouseId && warehouses.data?.items.length === 1) {
-      setWarehouseId(warehouses.data.items[0].id);
-    }
-  }, [warehouseId, warehouses.data?.items]);
   const create = useMutation({
     mutationFn: () => stockApi.createLocation(warehouseId, { code: code.trim(), name: name.trim(), kind }),
     onSuccess: async () => {
