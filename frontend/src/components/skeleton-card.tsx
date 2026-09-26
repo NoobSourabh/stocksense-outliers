@@ -5,7 +5,7 @@
  * loading placeholders while data is being fetched.
  */
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
+import { SkeletonText } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 interface SkeletonCardProps {

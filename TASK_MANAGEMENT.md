@@ -9,15 +9,17 @@
 
 - **Frontend scaffold is live**: Next.js 16 + React 19 + Tailwind v4 + Base UI/Shadcn dependencies installed; `npm run dev` works.
 - **Shared UI kit exists**: Button, Input, Badge, Card, Label, Separator, Skeleton, Tooltip, TablePagination, plus shared components (DataTable, KpiCard, StatusBadge, EmptyState, LoadingSpinner, Toasts, Theme, Query providers, skeleton variants).
-- **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Ready to wire to live backend auth endpoints** (SOUR-004 unblocked).
+- **Auth page at** `/login`: Login/signup/logout use the backend's HttpOnly cookie session; `/auth/me` protects app routes.
 - **Backend core is live**: FastAPI + asyncpg + SQLAlchemy 2 + Neon PostgreSQL connected. Alembic migrations up to head, seed data present.
 - **Single Source of Truth API Contract**: `docs/API_CONTRACT.md` extracted and frozen per `v2blueprint.md` Part 11.
 - **Auth & Session System verified**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with bcrypt, HttpOnly cookies (`SameSite=Lax`), and Bearer token fallback. Full test suite passing.
-- **P0 list routes scaffolded**: `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts|deliveries|adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile` — all render with `RouteScaffold` + mock tables/forms.
-- **Dashboard UI built (demo mode)**: KPI cards, URL-synced filter bar, recent operations table; tries `GET /dashboard` and falls back to sample data when backend is down.
+- **Inventory pages use FastAPI**: product search/create/edit/availability, operations list/create/transitions, stock balances, ledger, profile, and warehouse/location reads.
+- **Dashboard is live**: `/dashboard` supplies summary cards and `/operations` supplies URL-filtered recent operations; demo fallback remains for service failures.
 - **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
 - **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
-- **Operation routes present**: receipts, deliveries, and adjustments each have `new` and `[id]` views with demo-local ready/validate/cancel interactions.
+- **API client connected**: `lib/api.ts` routes requests through `/api/v1`, forwards the auth cookie, and the frontend now calls the available FastAPI endpoints.
+- **Operation routes present**: receipt, delivery, and adjustment lists and detail/create flows are wired to FastAPI; ready/validate/cancel actions update server state.
+- **Backend contract gaps remaining**: operations have no PATCH endpoint; warehouse/location write endpoints are not implemented; list APIs return a maximum of 50 rows without usable cursor pagination.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -59,40 +61,32 @@
   - *Done:* `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts`, `/operations/deliveries`, `/operations/adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile`
   - *Done:* operation `new` + `[id]` routes (×3 types); `/` redirects to `/login`; `/stock` route resolves; location detail moved to `/settings/locations/[id]`.
   - *Test:* `next dev` serves every P0 route without 404; nav links all resolve.
-- [-] **SOUR-004 · Wire auth page to real API** — replace local notices with calls to `/auth/login`, `/auth/signup`, `/auth/me`, `/auth/logout`
+- [x] **SOUR-004 · Wire auth page to real API** — login/signup/logout/me use the API's HttpOnly cookie session
   - *Test:* Sign in with demo credentials navigates to `/dashboard`; 401 redirects to `/login`.
-  - *Ready:* `lib/api.ts`, types, toast utils exist — only blocked on Kunal's auth endpoints (KUN-008–KUN-010).
-- [-] **SOUR-005 · Dashboard page** — UI built with KPI cards, filter bar (URL query sync), recent operations; demo fallback when API unavailable
-  - *Remaining:* wire to live `/dashboard` once KUN-020 lands; remove demo banner in production path.
+- [x] **SOUR-005 · Dashboard page** — live `/dashboard` summaries and `/operations` filters, with demo fallback on dashboard failure
+  - *Remaining:* none for available backend contract; demo fallback remains for unavailable service.
   - *Test:* KPIs match backend `/dashboard`; filters update URL query state and operation list.
-- [-] **SOUR-006 · Products page** — list + new + detail scaffold pages with local product search
-  - *Remaining:* real CRUD, per-location On Hand / Free-to-Use from API.
-  - *Blocked on:* Kunal's `/products` CRUD endpoints (KUN-014–KUN-015).
-- [-] **SOUR-007 · Receipts page** — list, create, and detail screens with demo-local ready/validate/cancel flow
-  - *Remaining:* connect operation screens to API and post stock changes.
-  - *Blocked on:* Kunal's `/operations` receipt endpoints (KUN-016–KUN-018).
-- [-] **SOUR-008 · Deliveries page** — list, create, and detail screens with under-covered line warning and demo-local actions
-  - *Remaining:* connect operation screens to API and post stock changes.
-  - *Blocked on:* Kunal's delivery endpoints + free-to-use calculation (KUN-015–KUN-018).
-- [-] **SOUR-009 · Adjustments page** — list, create, and detail screens with physical count/reason inputs and demo-local actions
-  - *Remaining:* connect operation screens to API and calculate/post adjustment deltas.
-  - *Blocked on:* Kunal's adjustment endpoints (KUN-016–KUN-018).
-- [-] **SOUR-010 · Move history / ledger page** — list scaffold with mock ledger rows
-  - *Remaining:* inbound green / outbound red styling from real data; pagination.
-  - *Blocked on:* Kunal's `/moves` ledger endpoint (KUN-019).
-- [-] **SOUR-011 · Settings pages (P1)** — warehouse + location list scaffolds with mock tables; location detail is at `/settings/locations/[id]`
-  - *Remaining:* CRUD forms wired to API.
-  - *Blocked on:* Kunal's `/warehouses` and `/locations` endpoints (KUN-012).
+- [-] **SOUR-006 · Products page** — live search/list, create/edit, and per-location availability
+  - *Remaining:* initial-stock posting; backend accepts the field but currently does not post an adjustment/ledger row.
+- [-] **SOUR-007 · Receipts page** — live list/create/detail/ready/validate/cancel workflow
+  - *Remaining:* editing draft details; backend has no operation PATCH endpoint.
+- [-] **SOUR-008 · Deliveries page** — live list/create/detail, server-calculated waiting/ready, validate/cancel, and under-covered line warning
+  - *Remaining:* editing draft details; backend has no operation PATCH endpoint.
+- [x] **SOUR-009 · Adjustments page** — live physical count/reason flow; server calculates the delta and posts the ledger move.
+- [-] **SOUR-010 · Move history / ledger page** — live ledger rows with inbound/outbound colors, filters, and local paging
+  - *Remaining:* server pagination beyond the 50-row API limit.
+- [-] **SOUR-011 · Settings pages (P1)** — live warehouse/location directories and location detail
+  - *Remaining:* create/edit forms; backend currently exposes only GET endpoints.
 
 
 
 ### Todo 📋
 
-- [ ] **SOUR-012 · Responsive + demo click-path polish** — ensure all P0 pages work at 390px and 1440px; no overflow
+- [-] **SOUR-012 · Responsive + demo click-path polish** — responsive grids and horizontally scrollable tables are in place; visual review remains
   - *Test:* Open every P0 page at both widths; all actions reachable.
-- [ ] **SOUR-013 · Remove console.logs, TODOs, placeholder copy** before feature freeze
+- [x] **SOUR-013 · Remove console.logs, TODOs, placeholder copy** before feature freeze
   - *Test:* `grep -R "TODO\|FIXME\|console.log\|lorem ipsum" frontend/src/app frontend/src/components` returns nothing demo-facing.
-- [ ] **SOUR-014 · Auth guard + redirect logic** — unauthenticated users → `/login`; authenticated `/login` → `/dashboard`; protect `(app)` routes
+- [x] **SOUR-014 · Auth guard + redirect logic** — unauthenticated users → `/login`; authenticated `/login` → `/dashboard`; protect app routes
   - *Test:* Direct visit to `/dashboard` without session redirects to `/login`.
 - [x] **SOUR-015 · Replace raw inputs with UI kit on auth page** — use `Button`, `Input`, `Card`, `Label` from `@/components/ui/*` (HAR-006 overlap)
   - *Test:* `/login` imports kit components; no raw `<button>`/`<input>` for primary controls.
@@ -105,15 +99,15 @@
 | --- | --- | --- | --- | --- |
 | 1 | **Finish SOUR-003 gaps** — add 6 operation sub-routes, redirect `/` → `/login`, and provide `/stock` | Done | ✅ | — |
 | 2 | **Move location UI** — relocate warehouse detail to `/settings/locations/[id]` | Done | ✅ | — |
-| 3 | **SOUR-014 auth guard** — middleware or layout check; redirect unauthenticated users | 20 min | ✅ Yes (cookie check stub OK until backend) | KUN-009 for real session |
-| 4 | **SOUR-004 wire login** — `POST /auth/login`, `POST /auth/signup`, store session, redirect to `/dashboard` | 30 min | ⏳ When backend up | KUN-008–KUN-010 |
+| 3 | **SOUR-014 auth guard** — verify session with `/auth/me` and redirect by auth state | Done | ✅ | — |
+| 4 | **SOUR-004 wire login** — login/signup/logout with cookie session and redirect | Done | ✅ | — |
 | 5 | **SOUR-015 kit-ify auth** — use shared `Button`/`Input`/`Card`/`Label` controls | Done | ✅ | — |
-| 6 | **Operation detail scaffolds** — create/detail screens, line table, under-stock warning, demo-local actions | Done | ✅ | — |
-| 7 | **Products list upgrade** — add local search and "New product" link | Done | ✅ | — |
-| 8 | **Wire dashboard live** — flip off demo fallback once `GET /dashboard` returns 200 | 10 min | ⏳ When backend up | KUN-020 |
-| 9 | **Wire products/operations/moves** — TanStack Query hooks per page | 2–3 hr | ⏳ When backend up | KUN-014–KUN-019 |
-| 10 | **SOUR-012 responsive pass** — 390px + 1440px on every route; fix table overflow | 30 min | After step 1 | — |
-| 11 | **SOUR-013 cleanup** — grep sweep before feature freeze @ 12:30 | 15 min | @ 12:15 | — |
+| 6 | **Operation detail flows** — create/detail routes with live server transitions | Done | ✅ | Draft editing requires an API PATCH endpoint |
+| 7 | **Products CRUD** — live search, create, edit, and location availability | Done | ✅ | Initial stock posting requires backend support |
+| 8 | **Wire dashboard live** — query dashboard and filtered operations; retain fallback | Done | ✅ | — |
+| 9 | **Wire products/operations/moves** — query/mutation hooks for available endpoints | Done | ✅ | Missing backend writes/pagination noted above |
+| 10 | **SOUR-012 responsive pass** — visually inspect every route at 390px and 1440px | Open | Needs visual review | — |
+| 11 | **SOUR-013 cleanup** — remove debug markers and unused scaffold placeholders | Done | ✅ | — |
 
 ---
 
@@ -296,11 +290,10 @@
 ## Active Blockers
 
 1. **None for Auth / Contract**: `docs/API_CONTRACT.md` is frozen, and backend auth endpoints (`/auth/signup`, `/auth/login`, `/auth/logout`, `/auth/me`) are live with verified session cookies. Sourabh can immediately wire SOUR-004 (`/login`).
-2. **Settings Pages Unblocked**: KUN-011 (Categories), KUN-012 (Warehouses & Locations), and KUN-013 (Partners) are complete with RBAC and validation. Sourabh can wire `/settings/warehouses`, `/settings/locations`, and location detail views (SOUR-011).
-3. **Products CRUD in Progress**: Awaiting KUN-014 & KUN-015 for product catalog and free-to-use balance views.
+2. **Settings & Product CRUD wiring**: Sourabh's remaining pages (SOUR-005 to SOUR-011) await completion of KUN-011–KUN-015 endpoints.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 (Reference data complete: KUN-011, KUN-012, KUN-013)*
-*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies), KUN-011 (Categories endpoint + search + manager create), KUN-012 (Warehouses & Locations endpoints + manager create + location detail), KUN-013 (Partners endpoint + supplier/customer/both filtering + create).*
-*Next available work: Sourabh to wire SOUR-004 to live auth and SOUR-011 to settings; Kunal to deliver Products CRUD and free-to-use calculation (KUN-014–KUN-015).*
+*Last updated: Saturday, Sep 26, 2026 (Backend core, API contract, and Auth verification)*
+*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies with full test suite passing).*
+*Next available work: Sourabh to wire SOUR-004 to live auth; Kunal to deliver Reference Data & Products CRUD (KUN-011–KUN-015).*
