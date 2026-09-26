@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, Columns3, List, Plus, Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DndContext, PointerSensor, type DragEndEvent, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { AlertCircle, Columns3, GripVertical, List, Plus, Search } from "lucide-react";
 import { stockApi, type Operation } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { Button } from "@/components/ui/button";
@@ -50,6 +52,23 @@ function formatDateTime(value?: string | null): string {
   }).format(date);
 }
 
+function getDropAction(currentStatus: string, targetStatus: string, type: string): "ready" | "validate" | "cancel" | null {
+  if (currentStatus === targetStatus) return null;
+  if (targetStatus === "canceled") {
+    if (["draft", "waiting", "ready"].includes(currentStatus)) return "cancel";
+    return null;
+  }
+  if (targetStatus === "ready") {
+    if (currentStatus === "draft" || (type === "delivery" && currentStatus === "waiting")) return "ready";
+    return null;
+  }
+  if (targetStatus === "done") {
+    if (currentStatus === "ready") return "validate";
+    return null;
+  }
+  return null;
+}
+
 export function OperationList({ kind }: { kind: keyof typeof CONFIG }) {
   const compactList = kind === "receipts" || kind === "deliveries";
   return (
@@ -80,6 +99,7 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
   const [view, setView] = useState<"list" | "kanban">("list");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [status, setStatus] = useState(initialStatus);
+  const queryClient = useQueryClient();
 
   const operations = useQuery({
     queryKey: ["operations", config.type, debouncedSearch, status],
@@ -88,6 +108,21 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
       const pages = await Promise.all(OPEN_STATUSES[kind].map((openStatus) => stockApi.operations({ type: config.type, search: debouncedSearch || undefined, status: openStatus })));
       const items = pages.flatMap((page) => page.items).sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
       return { items, total: pages.reduce((total, page) => total + page.total, 0) };
+    },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ operationId, targetStatus }: { operationId: string; targetStatus: string }) => {
+      const operation = operations.data?.items.find((item) => item.id === operationId);
+      if (!operation) throw new Error("Operation not found");
+      const action = getDropAction(operation.status, targetStatus, config.type);
+      if (!action) throw new Error(`Cannot move ${config.type} from ${operation.status} to ${targetStatus}`);
+      return stockApi.operationAction(operationId, action);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["operations", config.type] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["moves"] });
     },
   });
 
@@ -151,7 +186,7 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
         ) : (
           <>
             {compactList && view === "kanban" ? (
-              kind === "receipts" ? <ReceiptKanban operations={operations.data.items} /> : <DeliveryKanban operations={operations.data.items} />
+              <OperationKanban operations={operations.data.items} kind={kind} onDrop={(operationId, targetStatus) => void updateStatus.mutate({ operationId, targetStatus })} />
             ) : <div className="hidden overflow-x-auto md:block">
               <table className={`w-full text-left ${compactList ? "min-w-[760px]" : "min-w-[1050px]"}`}>
                 <thead>
@@ -230,50 +265,64 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
   );
 }
 
-function ReceiptKanban({ operations }: { operations: Operation[] }) {
-  const statuses = ["draft", "ready", "done", "canceled"];
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Receipts grouped by status">
-    {statuses.map((status) => {
-      const items = operations.filter((operation) => operation.status === status);
-      return <section key={status} className="min-w-0 rounded-lg bg-muted/60 p-3" aria-label={`${status} receipts`}>
-        <div className="mb-3 flex items-center justify-between px-1">
-          <h3 className="text-sm font-semibold capitalize">{status}</h3>
-          <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{items.length}</span>
-        </div>
-        <div className="grid gap-2">
-          {items.length === 0 ? <p className="rounded-md border border-dashed border-border px-3 py-5 text-center text-xs text-muted-foreground">No receipts</p> : items.map((operation) => <Link key={operation.id} href={`/operations/receipts/${operation.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <div className="flex items-start justify-between gap-2"><span className="font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status} /></div>
-            <p className="mt-2 truncate text-sm font-medium">{operation.partnerName ?? "Vendor"}</p>
-            <p className="mt-1 truncate text-xs text-muted-foreground">To {operation.destinationLocationName ?? "—"}</p>
-            <p className="mt-3 text-xs text-muted-foreground">{formatDateTime(operation.scheduleDate).split(",")[0]}</p>
-          </Link>)}
-        </div>
-      </section>;
-    })}
-  </div>;
+function OperationKanban({ operations, kind, onDrop }: { operations: Operation[]; kind: "receipts" | "deliveries"; onDrop: (operationId: string, targetStatus: string) => void }) {
+  const statuses = STATUSES[kind];
+  const title = CONFIG[kind].title;
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const operation = active.data.current?.operation as Operation | undefined;
+    const targetStatus = String(over.id);
+    if (!operation || operation.status === targetStatus) return;
+    onDrop(operation.id, targetStatus);
+  }
+  return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="flex items-start gap-4 overflow-x-auto pb-2" aria-label={`${title} grouped by status`}>
+        {statuses.map((status) => {
+          const items = operations.filter((operation) => operation.status === status);
+          return <KanbanColumn key={status} status={status} count={items.length}>
+            {items.length === 0 ? <p className="rounded-md border border-dashed border-border px-3 py-5 text-center text-xs text-muted-foreground">No {kind}</p> : items.map((operation) => <KanbanCard key={operation.id} operation={operation} kind={kind} />)}
+          </KanbanColumn>;
+        })}
+      </div>
+    </DndContext>
+  );
 }
 
-function DeliveryKanban({ operations }: { operations: Operation[] }) {
-  const statuses = ["draft", "waiting", "ready", "done", "canceled"];
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Deliveries grouped by status">
-    {statuses.map((status) => {
-      const items = operations.filter((operation) => operation.status === status);
-      return <section key={status} className="min-w-0 rounded-lg bg-muted/60 p-3" aria-label={`${status} deliveries`}>
-        <div className="mb-3 flex items-center justify-between px-1">
-          <h3 className="text-sm font-semibold capitalize">{status}</h3>
-          <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{items.length}</span>
-        </div>
-        <div className="grid gap-2">
-          {items.length === 0 ? <p className="rounded-md border border-dashed border-border px-3 py-5 text-center text-xs text-muted-foreground">No deliveries</p> : items.map((operation) => <Link key={operation.id} href={`/operations/deliveries/${operation.id}`} className="rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <div className="flex items-start justify-between gap-2"><span className="font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status} /></div>
-            <p className="mt-2 truncate text-sm font-medium">{operation.partnerName ?? "Customer"}</p>
-            <p className="mt-1 truncate text-xs text-muted-foreground">{operation.sourceLocationName ?? "—"} → Customer</p>
-            <p className="mt-3 text-xs text-muted-foreground">{formatDateTime(operation.scheduleDate).split(",")[0]}</p>
-          </Link>)}
-        </div>
-      </section>;
-    })}
-  </div>;
+function KanbanColumn({ status, count, children }: { status: string; count: number; children: ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id: status, data: { status } });
+  return <section ref={setNodeRef} className={`w-56 shrink-0 rounded-lg p-3 transition-colors ${isOver ? "bg-primary/10 ring-2 ring-primary/30" : "bg-muted/60"}`} aria-label={`${status} column`}>
+    <div className="mb-3 flex items-center justify-between px-1">
+      <h3 className="text-sm font-semibold capitalize">{status}</h3>
+      <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{count}</span>
+    </div>
+    <div className="grid gap-2">
+      {children}
+    </div>
+  </section>;
+}
+
+function KanbanCard({ operation, kind }: { operation: Operation; kind: "receipts" | "deliveries" }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: operation.id,
+    data: { operation },
+  });
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className={`relative rounded-md border border-border bg-card transition-colors hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isDragging ? "opacity-40 shadow-lg" : ""}`}>
+      <div className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab text-muted-foreground active:cursor-grabbing">
+        <GripVertical className="size-4" />
+      </div>
+      <Link href={`/operations/${kind}/${operation.id}`} className="block p-3 pl-6" onPointerDown={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-2"><span className="font-mono text-sm font-medium text-primary">{operation.reference}</span><StatusBadge status={operation.status} /></div>
+        <p className="mt-2 truncate text-sm font-medium">{operation.partnerName ?? (kind === "receipts" ? "Vendor" : "Customer")}</p>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{kind === "receipts" ? `To ${operation.destinationLocationName ?? "—"}` : `${operation.sourceLocationName ?? "—"} → Customer`}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{formatDateTime(operation.scheduleDate).split(",")[0]}</p>
+      </Link>
+    </div>
+  );
 }
 
 function ListField({ label, value }: { label: string; value: string }) {
