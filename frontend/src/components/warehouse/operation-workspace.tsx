@@ -58,7 +58,7 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
     onError: (error) => setMessage(error instanceof ApiError ? error.message : "Could not update the operation."),
   });
 
-  const allLocations = warehouses.data?.items.flatMap((warehouse) => warehouse.locations.map((location) => ({ ...location, warehouseName: warehouse.name }))) ?? [];
+  const allLocations = warehouses.data?.items.flatMap((warehouse) => warehouse.locations?.map((location) => ({ ...location, warehouseName: warehouse.name })) ?? []) ?? [];
   const selectedProduct = products.data?.items.find((item) => item.id === productId);
   const data = operation.data;
   const isLoading = mode === "detail" ? operation.isPending : products.isPending || warehouses.isPending || (type !== "adjustment" && partners.isPending);
@@ -73,7 +73,7 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
   return <RouteScaffold section={`Operations / ${label}`} title={mode === "new" ? `New ${label.toLowerCase()}` : `${label} ${data?.reference ?? ""}`} description={mode === "new" ? `Create and schedule a ${label.toLowerCase()}.` : "Review the operation, then move it through the stock workflow."}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <Link href={`/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to {kind}</Link>
-      {data && <StatusBadge status={data.status[0]?.toUpperCase() + data.status.slice(1)} />}
+      {data && <StatusBadge status={data.status} />}
     </div>
     {isLoading ? <p className="py-12 text-center text-sm text-muted-foreground" role="status">Loading operation details…</p>
       : loadError ? <div className="grid justify-items-center gap-3 py-12 text-center"><p className="text-sm text-destructive">Couldn’t load the required inventory data.</p><Button variant="outline" onClick={() => { void operation.refetch(); void products.refetch(); void warehouses.refetch(); }}>Retry</Button></div>

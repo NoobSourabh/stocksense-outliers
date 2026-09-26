@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, CalendarClock, CircleHelp, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Activity, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, Boxes, CalendarClock, CircleHelp, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { stockApi, type Dashboard } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { WarehousePanel } from "@/components/warehouse/warehouse-panel";
@@ -16,6 +17,9 @@ type OperationStatus = "draft" | "waiting" | "ready" | "done" | "canceled";
 interface DashboardFilters {
   type: string;
   status: string;
+  warehouseId: string;
+  locationId: string;
+  categoryId: string;
 }
 
 interface DashboardOperation {
@@ -28,6 +32,7 @@ interface DashboardOperation {
   scheduleDate?: string | null;
   schedule_date?: string | null;
   status: OperationStatus | string;
+  createdByName?: string;
   responsibleUser?: string | null;
   warehouseId?: string;
   locationId?: string;
@@ -39,6 +44,7 @@ interface DashboardOperation {
 type DashboardResponse = Omit<Dashboard, "recentOperations" | "lowStock"> & {
   lowStock: Dashboard["lowStock"] | number | { count?: number; total?: number; items?: unknown[] };
   scheduledTransfers?: number | { count?: number; total?: number };
+  activeProductCount?: number;
   recentOperations: DashboardOperation[];
 };
 
@@ -46,6 +52,7 @@ const DEMO_DASHBOARD: DashboardResponse = {
   receiptSummary: { toReceive: 8, late: 2, total: 14 },
   deliverySummary: { toDeliver: 11, late: 1, waiting: 3, total: 18 },
   lowStock: { count: 4 },
+  activeProductCount: 42,
   scheduledTransfers: 3,
   recentOperations: [
     { id: "demo-1", reference: "WH/OUT/0248", type: "delivery", partnerName: "Northstar Offices", scheduleDate: "2026-09-26", status: "ready", warehouseId: "WH-01", locationId: "LOC-A1", categoryId: "CAT-FURN" },
@@ -56,12 +63,15 @@ const DEMO_DASHBOARD: DashboardResponse = {
   ],
 };
 
-const FILTERS: (keyof DashboardFilters)[] = ["type", "status"];
+const FILTERS: (keyof DashboardFilters)[] = ["type", "status", "warehouseId", "locationId", "categoryId"];
 
 function readFilters(params: URLSearchParams): DashboardFilters {
   return {
     type: params.get("type") ?? "",
     status: params.get("status") ?? "",
+    warehouseId: params.get("warehouseId") ?? "",
+    locationId: params.get("locationId") ?? "",
+    categoryId: params.get("categoryId") ?? "",
   };
 }
 
@@ -108,8 +118,10 @@ function MetricCard({ title, value, hint, icon: Icon, tone = "blue" }: { title: 
 
 function SummaryCard({ kind, title, primary, late, total, waiting }: { kind: "receipt" | "delivery"; title: string; primary: number; late: number; total: number; waiting?: number }) {
   const Icon = kind === "receipt" ? ArrowDownToLine : ArrowUpFromLine;
+  const href = kind === "receipt" ? "/operations/receipts?status=open" : "/operations/deliveries?status=open";
   return (
-    <WarehousePanel className="p-5">
+    <Link href={href} className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <WarehousePanel className="p-5 transition-shadow hover:shadow-m3-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="size-4" /></span>{title}</div>
         <ArrowUpRight className="size-4 text-muted-foreground" />
@@ -120,7 +132,8 @@ function SummaryCard({ kind, title, primary, late, total, waiting }: { kind: "re
         {waiting !== undefined && <span className={waiting ? "font-medium text-destructive" : ""}>{waiting} waiting</span>}
         <span>{total} operations</span>
       </div>
-    </WarehousePanel>
+      </WarehousePanel>
+    </Link>
   );
 }
 
@@ -130,16 +143,30 @@ export function DashboardClient() {
   const searchParams = useSearchParams();
   const filters = useMemo(() => readFilters(new URLSearchParams(searchParams.toString())), [searchParams]);
   const activeFilterCount = FILTERS.filter((key) => filters[key]).length;
+  const warehouses = useQuery({ queryKey: ["warehouses", "dashboard"], queryFn: () => stockApi.warehouses(true) });
+  const categories = useQuery({ queryKey: ["categories", "dashboard"], queryFn: stockApi.categories });
+  const availableLocations = warehouses.data?.items.find((warehouse) => warehouse.id === filters.warehouseId)?.locations ?? [];
 
   const dashboardQuery = useQuery<DashboardResponse>({
     queryKey: ["dashboard", filters],
     queryFn: async () => {
-      const [dashboard, operationPage, transferPage] = await Promise.all([
-        stockApi.dashboard(),
-        stockApi.operations({ type: filters.type || undefined, status: filters.status || undefined }),
-        stockApi.operations({ type: "transfer" }),
+      const [dashboard, operationPage, receiptPage, deliveryPage, transferDrafts, transferReady, products] = await Promise.all([
+        stockApi.dashboard(filters),
+        stockApi.operations(filters),
+        stockApi.operations({ ...filters, type: "receipt" }),
+        stockApi.operations({ ...filters, type: "delivery" }),
+        stockApi.operations({ ...filters, type: "transfer", status: "draft" }),
+        stockApi.operations({ ...filters, type: "transfer", status: "ready" }),
+        stockApi.products("", filters.categoryId || undefined),
       ]);
-      return { ...dashboard, recentOperations: operationPage.items, scheduledTransfers: transferPage.items.filter((operation) => !["done", "canceled"].includes(operation.status)).length };
+      return {
+        ...dashboard,
+        receiptSummary: { ...dashboard.receiptSummary, total: receiptPage.total },
+        deliverySummary: { ...dashboard.deliverySummary, total: deliveryPage.total },
+        recentOperations: operationPage.items,
+        scheduledTransfers: dashboard.scheduledTransfers ?? transferDrafts.total + transferReady.total,
+        activeProductCount: dashboard.activeProductCount ?? products.total,
+      };
     },
   });
 
@@ -147,6 +174,7 @@ export function DashboardClient() {
     const next = new URLSearchParams(searchParams.toString());
     if (value) next.set(key, value);
     else next.delete(key);
+    if (key === "warehouseId") next.delete("locationId");
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
@@ -163,7 +191,10 @@ export function DashboardClient() {
   const operations = data?.recentOperations.filter((operation) => {
     if (!isDemo) return true;
     return (!filters.type || operation.type === filters.type)
-      && (!filters.status || operation.status === filters.status);
+      && (!filters.status || operation.status === filters.status)
+      && (!filters.warehouseId || operation.warehouseId === filters.warehouseId)
+      && (!filters.locationId || operation.locationId === filters.locationId)
+      && (!filters.categoryId || operation.categoryId === filters.categoryId);
   }) ?? [];
 
   return (
@@ -172,7 +203,7 @@ export function DashboardClient() {
         <div className="flex items-center gap-2 text-xs text-muted-foreground"><SlidersHorizontal className="size-4" /><span>Filter operations</span>{activeFilterCount > 0 && <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">{activeFilterCount} active</span>}</div>
         <Button variant="ghost" size="sm" onClick={clearFilters} disabled={activeFilterCount === 0} className="text-muted-foreground"><RotateCcw /> Clear filters</Button>
       </div>
-      <div className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2">
+      <div className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 xl:grid-cols-5">
         <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Operation type
           <select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)} className="h-9 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
             <option value="">All types</option><option value="receipt">Receipt</option><option value="delivery">Delivery</option><option value="transfer">Transfer</option><option value="adjustment">Adjustment</option>
@@ -183,18 +214,39 @@ export function DashboardClient() {
             <option value="">All statuses</option><option value="draft">Draft</option><option value="waiting">Waiting</option><option value="ready">Ready</option><option value="done">Done</option><option value="canceled">Canceled</option>
           </select>
         </label>
+        <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Warehouse
+          <select value={filters.warehouseId} onChange={(event) => updateFilter("warehouseId", event.target.value)} className="h-9 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+            <option value="">All warehouses</option>{warehouses.data?.items.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Location
+          <select value={filters.locationId} onChange={(event) => updateFilter("locationId", event.target.value)} disabled={!filters.warehouseId || warehouses.isPending} className="h-9 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60">
+            <option value="">All locations</option>{availableLocations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Product category
+          <select value={filters.categoryId} onChange={(event) => updateFilter("categoryId", event.target.value)} className="h-9 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+            <option value="">All categories</option>{categories.data?.items.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
+        </label>
       </div>
 
       {dashboardQuery.isPending ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Loading dashboard"><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /></div>
+        <div className="space-y-4" aria-label="Loading dashboard">
+          <div className="grid gap-4 md:grid-cols-2"><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /></div>
+          <div className="grid gap-4 md:grid-cols-3"><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /><div className="h-36 animate-pulse rounded-xl bg-muted" /></div>
+        </div>
       ) : data ? (
         <>
           {isDemo && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-bg/50 px-4 py-3 text-sm"><span className="flex items-center gap-2 text-foreground"><CircleHelp className="size-4 shrink-0 text-warning" /><span><strong>Sample data</strong><span className="text-muted-foreground"> · Live dashboard data isn’t available yet.</span></span></span><Button variant="outline" size="sm" onClick={() => void dashboardQuery.refetch()}>Retry connection</Button></div>}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <SummaryCard kind="receipt" title="Receipts" primary={data.receiptSummary.toReceive} late={data.receiptSummary.late} total={data.receiptSummary.total} />
             <SummaryCard kind="delivery" title="Deliveries" primary={data.deliverySummary.toDeliver} late={data.deliverySummary.late} waiting={data.deliverySummary.waiting} total={data.deliverySummary.total} />
-            <MetricCard title="Low stock items" value={countOf(data.lowStock)} hint="At or below reorder point" icon={AlertTriangle} tone="amber" />
-            <MetricCard title="Scheduled transfers" value={data.scheduledTransfers === undefined ? "—" : countOf(data.scheduledTransfers)} hint="Internal moves in progress" icon={CalendarClock} tone="green" />
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <MetricCard title="Total products in stock" value={data.activeProductCount ?? "—"} hint="Active products in the catalog" icon={Boxes} />
+            <MetricCard title="Low / out of stock" value={countOf(data.lowStock)} hint="At or below reorder point" icon={AlertTriangle} tone="amber" />
+            <MetricCard title="Scheduled transfers" value={data.scheduledTransfers === undefined ? "—" : countOf(data.scheduledTransfers)} hint="Open internal moves" icon={CalendarClock} tone="green" />
           </div>
           <div className="mt-6">
             <RoutePanel title="Recent operations" description="The latest receipts, deliveries, transfers, and adjustments matching your filters.">
@@ -202,8 +254,8 @@ export function DashboardClient() {
                 <div className="grid justify-items-center py-12 text-center"><span className="mb-3 grid size-11 place-items-center rounded-full bg-muted text-muted-foreground"><Activity className="size-5" /></span><p className="font-medium">No operations found</p><p className="mt-1 text-sm text-muted-foreground">Try adjusting or clearing your filters.</p></div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[700px] text-left">
-                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled", "Status"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
+                  <table className="w-full min-w-[850px] text-left">
+                    <thead><tr className="border-b border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{["Reference", "Type", "Contact", "Scheduled", "Status", "Responsible"].map((name) => <th key={name} className="px-3 py-3 font-medium">{name}</th>)}</tr></thead>
                     <tbody>{operations.map((operation) => (
                       <tr key={operation.id} className="border-b border-border/70 last:border-0 hover:bg-muted/50">
                         <td className="px-3 py-3.5 font-mono text-sm font-medium">{operation.reference}</td>
@@ -211,6 +263,7 @@ export function DashboardClient() {
                         <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.partner ?? operation.partnerName ?? operation.contactName ?? "—"}</td>
                         <td className="px-3 py-3.5 text-sm text-muted-foreground">{formatDate(operation.scheduleDate ?? operation.schedule_date)}</td>
                         <td className="px-3 py-3.5"><StatusBadge status={operation.status.charAt(0).toUpperCase() + operation.status.slice(1)} /></td>
+                        <td className="px-3 py-3.5 text-sm text-muted-foreground">{operation.createdByName ?? operation.responsibleUser ?? "—"}</td>
                       </tr>
                     ))}</tbody>
                   </table>

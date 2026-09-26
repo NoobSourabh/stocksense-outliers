@@ -9,10 +9,12 @@ import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
-  const products = useQuery({ queryKey: ["products", search], queryFn: () => stockApi.products(search) });
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const products = useQuery({ queryKey: ["products", debouncedSearch], queryFn: () => stockApi.products(debouncedSearch) });
   return <RouteScaffold section="Products" title="Products" description="Search the product catalog and review cost, category, and stock availability.">
     <RoutePanel title="Product catalog" description="Search products by name or SKU and manage product records.">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><label className="relative min-w-0 flex-1 sm:max-w-sm"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" aria-label="Search products" className="h-10 pl-9" /></label><Link href="/products/new"><Button><Plus /> New product</Button></Link></div>

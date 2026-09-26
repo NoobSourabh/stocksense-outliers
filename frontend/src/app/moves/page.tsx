@@ -8,13 +8,15 @@ import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/format";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 const PAGE_SIZE = 20;
 export default function MovesPage() {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [type, setType] = useState("");
   const [page, setPage] = useState(0);
-  const moves = useQuery({ queryKey: ["moves", search, type], queryFn: () => stockApi.moves({ search: search || undefined, type: type || undefined }) });
+  const moves = useQuery({ queryKey: ["moves", debouncedSearch, type], queryFn: () => stockApi.moves({ search: debouncedSearch || undefined, type: type || undefined }) });
   const rows = useMemo(() => moves.data?.items ?? [], [moves.data]);
   const visible = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
