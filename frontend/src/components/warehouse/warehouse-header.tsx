@@ -61,7 +61,7 @@ function NavigationItems({ mobile = false }: { mobile?: boolean }) {
                 mobile ? "ml-3" : "absolute left-0 top-full"
               }`}
             >
-              {item.items.map((child) => (
+              {item.items?.map((child) => (
                 <a
                   key={child.href}
                   href={child.href}
