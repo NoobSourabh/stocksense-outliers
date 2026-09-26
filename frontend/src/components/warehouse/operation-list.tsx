@@ -70,7 +70,7 @@ export function OperationList({ kind }: { kind: keyof typeof CONFIG }) {
             <AlertCircle className="size-10 text-destructive mb-3" />
             <h3 className="text-base font-semibold text-destructive">Failed to load {config.title.toLowerCase()}</h3>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              We couldn't connect to the inventory service. Check your connection or API server status.
+              We couldn&apos;t connect to the inventory service. Check your connection or API server status.
             </p>
             <Button variant="outline" className="mt-4" onClick={() => void operations.refetch()}>
               Try Again
