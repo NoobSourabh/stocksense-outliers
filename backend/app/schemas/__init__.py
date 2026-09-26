@@ -92,6 +92,11 @@ class CategoryResponse(CamelModel):
     is_active: bool = Field(alias="isActive")
 
 
+class CategoryCreateRequest(CamelModel):
+    code: str = Field(..., min_length=1, max_length=50)
+    name: str = Field(..., min_length=1, max_length=255)
+
+
 # ---------------------------------------------------------------------------
 # Warehouses & Locations
 # ---------------------------------------------------------------------------
@@ -105,6 +110,12 @@ class LocationResponse(CamelModel):
     is_active: bool = Field(alias="isActive")
 
 
+class LocationCreateRequest(CamelModel):
+    code: str = Field(..., min_length=1, max_length=50)
+    name: str = Field(..., min_length=1, max_length=255)
+    kind: str = "internal"
+
+
 class WarehouseResponse(CamelModel):
     id: str
     code: str
@@ -112,6 +123,12 @@ class WarehouseResponse(CamelModel):
     address: str | None = None
     is_active: bool = Field(alias="isActive")
     locations: list[LocationResponse] = []
+
+
+class WarehouseCreateRequest(CamelModel):
+    code: str = Field(..., min_length=1, max_length=50)
+    name: str = Field(..., min_length=1, max_length=255)
+    address: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +140,11 @@ class PartnerResponse(CamelModel):
     name: str
     kind: str
     is_active: bool = Field(alias="isActive")
+
+
+class PartnerCreateRequest(CamelModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    kind: str = "supplier"
 
 
 # ---------------------------------------------------------------------------

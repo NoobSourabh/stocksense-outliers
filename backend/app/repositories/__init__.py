@@ -16,10 +16,12 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.models import (
     Category,
     Location,
+    LocationKind,
     OperationLine,
     OperationStatus,
     OperationType,
     Partner,
+    PartnerKind,
     Product,
     ReferenceSequence,
     StockBalance,
@@ -65,19 +67,48 @@ async def create_user(db: AsyncSession, user: User) -> User:
 # Categories
 # ---------------------------------------------------------------------------
 
-async def list_categories(db: AsyncSession) -> list[Category]:
-    result = await db.execute(
-        select(Category).where(Category.is_active == True).order_by(Category.name)
-    )
+async def list_categories(db: AsyncSession, search: str | None = None) -> list[Category]:
+    stmt = select(Category).where(Category.is_active == True).order_by(Category.name)
+    if search:
+        pattern = f"%{search.strip()}%"
+        stmt = stmt.where(
+            (Category.name.ilike(pattern)) | (Category.code.ilike(pattern))
+        )
+    result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_category_by_code(db: AsyncSession, code: str) -> Category | None:
+    result = await db.execute(
+        select(Category).where(func.lower(Category.code) == code.strip().lower())
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_category_by_id(db: AsyncSession, category_id: uuid.UUID) -> Category | None:
+    result = await db.execute(
+        select(Category).where(Category.id == category_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_category(db: AsyncSession, category: Category) -> Category:
+    db.add(category)
+    await db.flush()
+    return category
 
 
 # ---------------------------------------------------------------------------
 # Warehouses & Locations
 # ---------------------------------------------------------------------------
 
-async def list_warehouses(db: AsyncSession, include_locations: bool = False) -> list[Warehouse]:
+async def list_warehouses(
+    db: AsyncSession, include_locations: bool = False, search: str | None = None
+) -> list[Warehouse]:
     stmt = select(Warehouse).where(Warehouse.is_active == True).order_by(Warehouse.name)
+    if search:
+        pattern = f"%{search.strip()}%"
+        stmt = stmt.where((Warehouse.name.ilike(pattern)) | (Warehouse.code.ilike(pattern)))
     if include_locations:
         stmt = stmt.options(selectinload(Warehouse.locations))
     result = await db.execute(stmt)
@@ -91,6 +122,19 @@ async def get_warehouse_by_id(db: AsyncSession, warehouse_id: uuid.UUID) -> Ware
     return result.scalar_one_or_none()
 
 
+async def get_warehouse_by_code(db: AsyncSession, code: str) -> Warehouse | None:
+    result = await db.execute(
+        select(Warehouse).where(func.lower(Warehouse.code) == code.strip().lower())
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_warehouse(db: AsyncSession, warehouse: Warehouse) -> Warehouse:
+    db.add(warehouse)
+    await db.flush()
+    return warehouse
+
+
 async def get_location_by_id(db: AsyncSession, location_id: uuid.UUID) -> Location | None:
     result = await db.execute(
         select(Location).options(joinedload(Location.warehouse)).where(Location.id == location_id)
@@ -98,18 +142,65 @@ async def get_location_by_id(db: AsyncSession, location_id: uuid.UUID) -> Locati
     return result.scalar_one_or_none()
 
 
+async def get_location_by_warehouse_and_code(
+    db: AsyncSession, warehouse_id: uuid.UUID, code: str
+) -> Location | None:
+    result = await db.execute(
+        select(Location).where(
+            Location.warehouse_id == warehouse_id,
+            func.lower(Location.code) == code.strip().lower(),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_location(db: AsyncSession, location: Location) -> Location:
+    db.add(location)
+    await db.flush()
+    return location
+
+
+async def list_locations(
+    db: AsyncSession, warehouse_id: uuid.UUID | None = None
+) -> list[Location]:
+    stmt = (
+        select(Location)
+        .options(joinedload(Location.warehouse))
+        .where(Location.is_active == True)
+        .order_by(Location.name)
+    )
+    if warehouse_id:
+        stmt = stmt.where(Location.warehouse_id == warehouse_id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 # ---------------------------------------------------------------------------
 # Partners
 # ---------------------------------------------------------------------------
 
-async def list_partners(db: AsyncSession, kind: str | None = None, search: str | None = None) -> list[Partner]:
+async def list_partners(
+    db: AsyncSession, kind: str | None = None, search: str | None = None
+) -> list[Partner]:
     stmt = select(Partner).where(Partner.is_active == True).order_by(Partner.name)
     if kind:
-        stmt = stmt.where(Partner.kind == kind)
+        clean_kind = kind.strip().lower()
+        if clean_kind == "supplier":
+            stmt = stmt.where(Partner.kind.in_([PartnerKind.SUPPLIER, PartnerKind.BOTH]))
+        elif clean_kind == "customer":
+            stmt = stmt.where(Partner.kind.in_([PartnerKind.CUSTOMER, PartnerKind.BOTH]))
+        elif clean_kind == "both":
+            stmt = stmt.where(Partner.kind == PartnerKind.BOTH)
     if search:
-        stmt = stmt.where(Partner.name.ilike(f"%{search}%"))
+        stmt = stmt.where(Partner.name.ilike(f"%{search.strip()}%"))
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def create_partner(db: AsyncSession, partner: Partner) -> Partner:
+    db.add(partner)
+    await db.flush()
+    return partner
 
 
 # ---------------------------------------------------------------------------

@@ -138,23 +138,18 @@
   - *Test:* `tests/test_auth_api.py` verifies 201 signup + cookie, 409 conflict, 401 on bad password with exact message "Invalid Login Id or Password", and 200 on logout clearing cookie.
 - [x] **KUN-010 · Password hashing + JWT/session cookies** — bcrypt hashing with salt, signed JWTs with expiration, HttpOnly cookie with `SameSite=Lax`
   - *Test:* Verified in `tests/test_auth_api.py` and `tests/test_user_model.py`. All 6 tests passing.
+- [x] **KUN-011 · Categories endpoint** — `GET /categories?search=`, `POST /categories` (P1 create) with manager RBAC, uppercase code normalization, and 409 conflict validation
+  - *Test:* `tests/test_reference_api.py` verifies list, search query filtering, manager 201 creation, 403 on staff attempt, and 409 duplicate code conflict.
+- [x] **KUN-012 · Warehouses + locations endpoints** — `GET /warehouses?includeLocations=true`, `POST /warehouses`, `GET /warehouses/{id}`, `POST /warehouses/{id}/locations`, `GET /locations`, `GET /locations/{id}`
+  - *Test:* `tests/test_reference_api.py` verifies list with nested locations, search, warehouse creation with unique code, 404 on missing warehouse, location creation with unique code per warehouse, 403 on staff attempt, and 409 on duplicate code.
+- [x] **KUN-013 · Partners endpoint** — `GET /partners?kind=&search=`, `POST /partners` with manager RBAC and kind validation
+  - *Test:* `tests/test_reference_api.py` verifies partner list, kind filtering (supplier/customer including both), search query filtering, 201 creation, and 422 on invalid kind.
 
 ### In Progress 🔄
 
-- [-] **KUN-011 · Categories endpoint** & **KUN-012 · Warehouses + locations endpoints** — reference data and master data endpoints
+- [-] **KUN-014 · Products CRUD** & **KUN-015 · StockBalance model + free-to-use calculation** — product catalog and location-level inventory balance
 
 ### Todo 📋
-
-#### Reference data endpoints
-
-- [ ] **KUN-011 · Categories endpoint** — `GET /categories` (P1 create)
-  - *Test:* Returns list of active categories.
-- [ ] **KUN-012 · Warehouses + locations endpoints** — `GET /warehouses?includeLocations=true`, `POST /warehouses` (P1), `POST /warehouses/{id}/locations` (P1)
-  - *Test:* List returns warehouses with nested locations; create returns 201 with unique code validation.
-- [ ] **KUN-013 · Partners endpoint** — `GET /partners?kind=&search=`
-  - *Test:* Returns supplier/customer choices for operation forms.
-
-
 
 #### Products + balances
 
@@ -306,10 +301,11 @@
 ## Active Blockers
 
 1. **None for Auth / Contract**: `docs/API_CONTRACT.md` is frozen, and backend auth endpoints (`/auth/signup`, `/auth/login`, `/auth/logout`, `/auth/me`) are live with verified session cookies. Sourabh can immediately wire SOUR-004 (`/login`).
-2. **Settings & Product CRUD wiring**: Sourabh's remaining pages (SOUR-005 to SOUR-011) await completion of KUN-011–KUN-015 endpoints.
+2. **Settings Pages Unblocked**: KUN-011 (Categories), KUN-012 (Warehouses & Locations), and KUN-013 (Partners) are complete with RBAC and validation. Sourabh can wire `/settings/warehouses`, `/settings/locations`, and location detail views (SOUR-011).
+3. **Products CRUD in Progress**: Awaiting KUN-014 & KUN-015 for product catalog and free-to-use balance views.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 (Backend core, API contract, and Auth verification)*
-*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies with full test suite passing).*
-*Next available work: Sourabh to wire SOUR-004 to live auth; Kunal to deliver Reference Data & Products CRUD (KUN-011–KUN-015).*
+*Last updated: Saturday, Sep 26, 2026 (Reference data complete: KUN-011, KUN-012, KUN-013)*
+*Completed: KUN-007 (API Contract extraction), KUN-008 (User model + migrations), KUN-009 (Auth endpoints), KUN-010 (Bcrypt password hashing + JWT/session cookies), KUN-011 (Categories endpoint + search + manager create), KUN-012 (Warehouses & Locations endpoints + manager create + location detail), KUN-013 (Partners endpoint + supplier/customer/both filtering + create).*
+*Next available work: Sourabh to wire SOUR-004 to live auth and SOUR-011 to settings; Kunal to deliver Products CRUD and free-to-use calculation (KUN-014–KUN-015).*
