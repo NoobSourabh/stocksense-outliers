@@ -1,28 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { LocationHierarchy } from "@/components/warehouse/location-hierarchy";
-import { LocationOverview } from "@/components/warehouse/location-overview";
-import { LocationProfile } from "@/components/warehouse/location-profile";
-import { LocationSidebar, WarehouseMetrics } from "@/components/warehouse/location-sidebar";
-import { WarehouseFooter } from "@/components/warehouse/warehouse-footer";
-import { WarehouseHeader } from "@/components/warehouse/warehouse-header";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+import { stockApi } from "@/lib/stock-api";
+import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
+import { Button } from "@/components/ui/button";
 
-export default function WarehouseLocationPage() {
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <WarehouseHeader onSave={() => setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))} />
-      <main className="mx-auto max-w-[1520px] px-4 py-5 sm:px-6 lg:py-7">
-        {savedAt && <div role="status" className="mb-4 flex items-center justify-between rounded-lg border border-success/20 bg-success-bg px-4 py-3 text-sm text-success"><span>Location changes saved successfully.</span><span className="font-mono text-xs">Saved {savedAt}</span></div>}
-        <LocationOverview />
-        <div className="mt-6 grid gap-6 lg:grid-cols-12">
-          <div className="space-y-6 lg:col-span-8"><LocationProfile /><LocationHierarchy /></div>
-          <aside className="space-y-6 lg:col-span-4"><LocationSidebar /></aside>
-        </div>
-        <WarehouseMetrics />
-      </main>
-      <WarehouseFooter />
-    </div>
-  );
+export default function LocationDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const warehouses = useQuery({ queryKey: ["warehouses", true], queryFn: () => stockApi.warehouses(true) });
+  const warehouse = warehouses.data?.items.find((item) => item.locations.some((location) => location.id === id));
+  const location = warehouse?.locations.find((item) => item.id === id);
+  return <RouteScaffold section="Settings / Locations" title={location?.name ?? "Location details"} description="View the location code, type, and parent warehouse.">
+    <div className="mb-4"><Link href="/settings/locations" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to locations</Link></div>
+    <RoutePanel title="Location profile" description="Location records are currently read-only in the available API.">
+      {warehouses.isPending ? <p role="status" className="py-10 text-sm text-muted-foreground">Loading location…</p> : warehouses.isError ? <div className="grid justify-items-center gap-3 py-10"><p className="text-sm text-destructive">Couldn’t load this location.</p><Button variant="outline" onClick={() => void warehouses.refetch()}>Retry</Button></div> : !location ? <p className="py-10 text-sm text-muted-foreground">This location does not exist or is unavailable.</p> : <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Name", location.name], ["Short code", location.code], ["Warehouse", warehouse?.name ?? "—"], ["Location type", location.kind], ["Status", location.isActive ? "Active" : "Inactive"]].map(([label, value]) => <div key={label}><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 text-sm">{value}</dd></div>)}</dl>}
+    </RoutePanel>
+  </RouteScaffold>;
 }
