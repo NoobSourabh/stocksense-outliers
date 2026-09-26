@@ -487,7 +487,7 @@ function OperationEditForm({
 
   return (
     <form onSubmit={submit}>
-      <RoutePanel title="Edit operation details" description="Update the partner, location, schedule, and line before the operation is ready.">
+      <RoutePanel title={`Edit ${label.toLowerCase()} details`} description="Update the partner, location, schedule, and line before the operation is ready.">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {usesPartner && (
             <Select

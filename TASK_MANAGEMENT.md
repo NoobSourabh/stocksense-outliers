@@ -66,12 +66,15 @@
 - [x] **SOUR-005 · Dashboard page** — live `/dashboard` summaries and `/operations` filters, with demo fallback on dashboard failure
   - *Remaining:* none for available backend contract; demo fallback remains for unavailable service.
   - *Test:* KPIs match backend `/dashboard`; filters update URL query state and operation list.
-- [-] **SOUR-006 · Products page** — live search/list, create/edit, and per-location availability
-  - *Remaining:* initial-stock posting; backend accepts the field but currently does not post an adjustment/ledger row.
-- [-] **SOUR-007 · Receipts page** — live list/create/detail/ready/validate/cancel workflow
-  - *Remaining:* editing draft details; backend has no operation PATCH endpoint.
-- [-] **SOUR-008 · Deliveries page** — live list/create/detail, server-calculated waiting/ready, validate/cancel, and under-covered line warning
-  - *Remaining:* editing draft details; backend has no operation PATCH endpoint.
+- [x] **SOUR-006 · Products page** — live search/list, create/edit, and per-location availability
+  - *Frontend complete:* new product form collects optional initial-stock location + quantity and sends the correct `initialStock: { locationId, quantity }` payload.
+  - *Remaining backend:* post the adjustment/ledger row when `initialStock` is provided.
+- [x] **SOUR-007 · Receipts page** — live list/create/detail/ready/validate/cancel workflow
+  - *Frontend complete:* draft receipt detail page exposes an Edit mode for partner, destination location, schedule date, product, and quantity; calls `PATCH /operations/{id}`.
+  - *Remaining backend:* implement `PATCH /operations/{id}`.
+- [x] **SOUR-008 · Deliveries page** — live list/create/detail, server-calculated waiting/ready, validate/cancel, and under-covered line warning
+  - *Frontend complete:* draft delivery detail page exposes an Edit mode for customer, source location, schedule date, product, and quantity; calls `PATCH /operations/{id}`; under-covered warning is shown on create and edit.
+  - *Remaining backend:* implement `PATCH /operations/{id}`.
 - [x] **SOUR-009 · Adjustments page** — live physical count/reason flow; server calculates the delta and posts the ledger move.
 - [-] **SOUR-010 · Move history / ledger page** — live ledger rows with inbound/outbound colors, filters, and local paging
   - *Remaining:* server pagination beyond the 50-row API limit.
@@ -305,13 +308,13 @@
 
 ## Active Blockers
 
-1. **Operation draft editing (SOUR-007/008)**: Backend lacks `PATCH /operations/{id}` — Kunal owns KUN-016 remainder.
-2. **Product initial stock (SOUR-006)**: Frontend sends `initialStock` but backend does not post ledger row — Kunal owns KUN-014 remainder.
+1. **Operation draft editing (SOUR-007/008)**: Frontend edit UI is wired to `PATCH /operations/{id}`; backend still needs to implement the endpoint — Kunal owns KUN-016 remainder.
+2. **Product initial stock (SOUR-006)**: Frontend sends `initialStock: { locationId, quantity }`; backend still needs to post the adjustment/ledger row — Kunal owns KUN-014 remainder.
 3. **Ledger pagination (SOUR-010)**: `/moves` capped at 50 rows — Kunal owns KUN-024 remainder.
 
 ---
 
-*Last updated: Saturday, Sep 26, 2026 · 1:31 PM*
-*Sourabh next up: **SOUR-011** — wire settings create forms (warehouses + locations).*
+*Last updated: Saturday, Sep 26, 2026 · 1:45 PM*
+*Sourabh next up: **SOUR-012** — responsive + demo click-path polish.*
 *Kunal next up: **KUN-016 PATCH** + **KUN-014 initialStock** + **KUN-023 deploy**.*
 *Hardik next up: **HAR-009** responsive regression (pair with SOUR-012).*
