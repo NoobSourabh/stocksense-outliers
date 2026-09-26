@@ -12,12 +12,12 @@
 - **Auth page at** `/login`: Sign-in / sign-up tabs, Login ID (6–12 chars), email, password complexity rules, error notice, responsive layout. **Not yet wired to a real backend** — local validation only.
 - **P0 list routes scaffolded**: `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts|deliveries|adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile` — all render with `RouteScaffold` + mock tables/forms.
 - **Dashboard UI built (demo mode)**: KPI cards, URL-synced filter bar, recent operations table; tries `GET /dashboard` and falls back to sample data when backend is down.
-- **Warehouse location UI at** `/`: full location detail page (Hardik design merged locally). Should move to `/settings/locations/[id]` per blueprint; `/` should redirect to `/login` or `/dashboard`.
-- **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. **`/stock` 404s** — nav link needs a page or removal.
+- **Warehouse location UI at** `/settings/locations/[id]`; `/` redirects to `/login`.
+- **Shared nav in** `WarehouseHeader`: links Dashboard, Operations, Products, Stock, Move History, Settings. `/stock` now serves an inventory availability view.
 - **API client ready**: `lib/api.ts` + types/constants exist; dashboard already uses `apiFetch`. Auth wiring (SOUR-004) can start as soon as Kunal lands endpoints.
 - **No backend folder exists yet**: Kunal needs to scaffold FastAPI/Postgres/backend core immediately.
 - **No** `docs/API_CONTRACT.md` **exists yet**: contract is only inside `v2blueprint.md`.
-- **Missing operation sub-routes**: `/operations/receipts/new`, `/operations/receipts/[id]` (and mirrors for deliveries/adjustments) not created yet.
+- **Operation routes present**: receipts, deliveries, and adjustments each have `new` and `[id]` views with demo-local ready/validate/cancel interactions.
 - **Status key**: `[x]` done · `[-]` in progress / partial · `[ ]` not started · **BLOCKER** = must fix before demo.
 - **Task codes**: `SOUR-xxx` = Sourabh · `KUN-xxx` = Kunal · `HAR-xxx` = Hardik · `SHR-xxx` = shared.
 
@@ -55,9 +55,9 @@
 
 ### In Progress 🔄
 
-- [-] **SOUR-003 · Route scaffolding** — P0 list routes exist; gaps remain
+- [x] **SOUR-003 · Route scaffolding** — P0 route shells and operation detail/new routes are present
   - *Done:* `/dashboard`, `/products`, `/products/new`, `/products/[id]`, `/operations/receipts`, `/operations/deliveries`, `/operations/adjustments`, `/moves`, `/settings/warehouses`, `/settings/locations`, `/profile`
-  - *Remaining:* operation `new` + `[id]` routes (×3 types); fix `/` redirect; resolve `/stock` nav 404; move warehouse location UI from `/` → `/settings/locations/[id]`; optional shared `(app)/layout.tsx`
+  - *Done:* operation `new` + `[id]` routes (×3 types); `/` redirects to `/login`; `/stock` route resolves; location detail moved to `/settings/locations/[id]`.
   - *Test:* `next dev` serves every P0 route without 404; nav links all resolve.
 - [-] **SOUR-004 · Wire auth page to real API** — replace local notices with calls to `/auth/login`, `/auth/signup`, `/auth/me`, `/auth/logout`
   - *Test:* Sign in with demo credentials navigates to `/dashboard`; 401 redirects to `/login`.
