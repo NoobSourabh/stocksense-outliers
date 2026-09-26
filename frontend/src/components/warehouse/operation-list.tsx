@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { AlertCircle, Plus, Search } from "lucide-react";
 import { stockApi, type Operation } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { Button } from "@/components/ui/button";
@@ -110,9 +110,15 @@ function OperationListContent({ kind, initialStatus }: { kind: keyof typeof CONF
         {operations.isPending ? (
           <div className="py-2"><SkeletonTable columns={8} rows={6} showSearch={false} showPagination={false} /></div>
         ) : operations.isError ? (
-          <div className="grid justify-items-center gap-3 py-12 text-center">
-            <p className="text-sm text-destructive">Couldn’t load operations. Check your connection and try again.</p>
-            <Button variant="outline" onClick={() => void operations.refetch()}>Retry</Button>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
+            <AlertCircle className="size-10 text-destructive mb-3" />
+            <h3 className="text-base font-semibold text-destructive">Failed to load {config.title.toLowerCase()}</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              We couldn&apos;t connect to the inventory service. Check your connection or API server status.
+            </p>
+            <Button variant="outline" className="mt-4" onClick={() => void operations.refetch()}>
+              Try Again
+            </Button>
           </div>
         ) : operations.data.items.length === 0 ? (
           <EmptyState title={`No ${config.title.toLowerCase()} found`} description="No operations match these filters. Create one or adjust your search and status filters." />
