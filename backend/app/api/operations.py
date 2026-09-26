@@ -125,20 +125,22 @@ async def list_operations_route(
     status: str | None = Query(None),
     warehouse_id: uuid.UUID | None = Query(None, alias="warehouseId"),
     search: str | None = Query(None),
+    cursor: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> PaginatedResponse:
-    ops = await list_operations(
+    ops, total, next_cursor = await list_operations(
         db,
         op_type=type,
         status=status,
         warehouse_id=warehouse_id,
         search=search,
+        cursor=cursor,
         limit=limit,
     )
     items = [_summary_response(op) for op in ops]
-    return PaginatedResponse(items=items, total=len(items))
+    return PaginatedResponse(items=items, total=total, next_cursor=next_cursor)
 
 
 @router.post("", status_code=201)

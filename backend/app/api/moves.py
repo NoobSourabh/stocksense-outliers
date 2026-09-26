@@ -26,11 +26,12 @@ async def list_moves_route(
     search: str | None = Query(None),
     from_date: date | None = Query(None, alias="fromDate"),
     to_date: date | None = Query(None, alias="toDate"),
+    cursor: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user_dep),
 ) -> PaginatedResponse:
-    moves = await list_moves(
+    moves, total, next_cursor = await list_moves(
         db,
         product_id=product_id,
         location_id=location_id,
@@ -38,6 +39,7 @@ async def list_moves_route(
         search=search,
         from_date=from_date,
         to_date=to_date,
+        cursor=cursor,
         limit=limit,
     )
     items = [
@@ -60,4 +62,4 @@ async def list_moves_route(
         )
         for m in moves
     ]
-    return PaginatedResponse(items=items, total=len(items))
+    return PaginatedResponse(items=items, total=total, next_cursor=next_cursor)

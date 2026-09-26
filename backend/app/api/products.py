@@ -95,9 +95,13 @@ async def list_products_route(
             )
         )
 
-    # Apply limit
-    limited_items = items[:limit]
-    return PaginatedResponse(items=limited_items, total=len(items))
+    # Apply cursor and limit
+    start = 0
+    if cursor and cursor.isdigit():
+        start = int(cursor)
+    limited_items = items[start : start + limit]
+    next_cursor = str(start + limit) if start + limit < len(items) else None
+    return PaginatedResponse(items=limited_items, total=len(items), next_cursor=next_cursor)
 
 
 @router.post("", status_code=201)
