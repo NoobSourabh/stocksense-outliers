@@ -1,6 +1,14 @@
-# StockSense (Team Outlier)
+# StockSense
 
 StockSense — Intelligent stock and inventory outlier analysis platform developed for the Odoo Hackathon.
+
+## Team Outliers
+
+| Member | Role |
+|--------|------|
+| **Sourabh Chouhan** | Frontend Lead — React/Next.js pages, routing, API integration, demo click-path, responsive layouts |
+| **Kunal Waghe** | Backend — Python API, business logic, auth, database schema/migrations, seed data, deployment |
+| **Hardik Singh Chouhan** | UI Kit & QA — shared components, loading/empty/error states, component quality, bug bash, demo testing |
 
 ## Repository Structure
 
