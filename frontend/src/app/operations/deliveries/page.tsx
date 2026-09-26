@@ -17,30 +17,21 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
-  Warehouse,
   Boxes,
   Truck,
   History,
-  Settings,
   Bell,
   Sun,
   Moon,
   X,
   Check,
   Clock,
-  AlertCircle,
-  FileText,
   Barcode,
   Menu,
   Copy,
-  RefreshCw,
   ArrowUpRight,
   Zap,
   Radio,
-  Layers,
-  ShieldCheck,
-  Share2,
 } from "lucide-react";
 
 export type DeliveryStatus = "Ready" | "Waiting" | "Done" | "Draft";
@@ -278,20 +269,29 @@ export default function DeliveriesPage() {
     });
   }, [deliveries, searchQuery, activeTab]);
 
-  // Counts
+  // Dynamic Manifest Counts
   const counts = useMemo(() => {
-    const all = 32; // Master manifest count matching prompt
-    const ready = deliveries.filter((r) => r.status === "Ready").length + 15; // Scaled to 18
-    const waiting = deliveries.filter((r) => r.status === "Waiting").length + 4; // Scaled to 6
-    const done = deliveries.filter((r) => r.status === "Done").length + 13; // Scaled to 14
+    const ready = deliveries.filter((r) => r.status === "Ready").length;
+    const waiting = deliveries.filter((r) => r.status === "Waiting").length;
+    const done = deliveries.filter((r) => r.status === "Done").length;
+    const shippedToday = deliveries.filter(
+      (r) => r.status === "Done" && (r.isToday || r.scheduleDay === "Today")
+    ).length;
     return {
-      all: 32,
-      ready: 18,
-      waiting: 6,
-      done: 8,
-      shippedToday: 14,
+      all: deliveries.length,
+      ready,
+      waiting,
+      done,
+      shippedToday,
     };
   }, [deliveries]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredDeliveries.length / rowsPerPage));
+  const paginatedDeliveries = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredDeliveries.slice(start, start + rowsPerPage);
+  }, [filteredDeliveries, currentPage, rowsPerPage]);
 
   // Bulk selection toggles
   const isAllSelected =
@@ -395,6 +395,10 @@ export default function DeliveriesPage() {
     setIsNewDeliveryOpen(false);
     setNewCustomer("");
     setNewContact("");
+    setNewScheduleDate("Today");
+    setNewScheduleTime("16:30");
+    setNewCarrier("FedEx Freight Direct");
+    setNewItemsCount("6");
     showToast(`Created outbound delivery ${refCode} successfully!`, "success");
   };
 
@@ -956,7 +960,7 @@ export default function DeliveriesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal text-slate-700 dark:text-slate-300" id="table-row-body">
-                  {filteredDeliveries.map((row) => {
+                  {paginatedDeliveries.map((row) => {
                     const isSelected = selectedIds.has(row.id);
                     return (
                       <tr
@@ -1126,7 +1130,7 @@ export default function DeliveriesPage() {
 
             {/* Mobile Card List for small screens */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredDeliveries.map((row) => (
+              {paginatedDeliveries.map((row) => (
                 <div key={row.id} className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1224,14 +1228,19 @@ export default function DeliveriesPage() {
             <div className="px-4 py-3 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-4">
                 <span>
-                  Showing <strong className="text-slate-800 dark:text-slate-200 font-medium">1 to {filteredDeliveries.length}</strong> of{" "}
-                  <strong className="text-slate-800 dark:text-slate-200 font-medium">{counts.all}</strong> deliveries
+                  Showing <strong className="text-slate-800 dark:text-slate-200 font-medium">
+                    {filteredDeliveries.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredDeliveries.length)}
+                  </strong> of{" "}
+                  <strong className="text-slate-800 dark:text-slate-200 font-medium">{filteredDeliveries.length}</strong> deliveries
                 </span>
                 <div className="flex items-center gap-1.5">
                   <span>Per page:</span>
                   <select
                     value={rowsPerPage}
-                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                    onChange={(e) => {
+                      setRowsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                     className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-0.5 font-medium text-slate-700 dark:text-slate-300 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value={10}>10</option>
@@ -1245,57 +1254,34 @@ export default function DeliveriesPage() {
                   disabled={currentPage === 1}
                   onClick={() => {
                     setCurrentPage((p) => Math.max(1, p - 1));
-                    showToast("Loaded previous page.", "info");
                   }}
-                  className="px-2.5 py-1 rounded-l-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-2.5 py-1 rounded-l-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer inline-flex items-center gap-1"
                 >
-                  Previous
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Previous</span>
                 </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-2.5 py-1 border font-medium cursor-pointer ${
+                      currentPage === pageNum
+                        ? "border-blue-600 bg-blue-50/80 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-semibold"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
                 <button
-                  onClick={() => setCurrentPage(1)}
-                  className={`px-2.5 py-1 border z-10 font-semibold cursor-pointer ${
-                    currentPage === 1
-                      ? "border-blue-600 bg-blue-50/80 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  1
-                </button>
-                <button
+                  disabled={currentPage >= totalPages}
                   onClick={() => {
-                    setCurrentPage(2);
-                    showToast("Switched to page 2.", "info");
+                    setCurrentPage((p) => Math.min(totalPages, p + 1));
                   }}
-                  className={`px-2.5 py-1 border font-medium cursor-pointer ${
-                    currentPage === 2
-                      ? "border-blue-600 bg-blue-50/80 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
+                  className="px-2.5 py-1 rounded-r-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer inline-flex items-center gap-1"
                 >
-                  2
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentPage(3);
-                    showToast("Switched to page 3.", "info");
-                  }}
-                  className={`px-2.5 py-1 border font-medium cursor-pointer ${
-                    currentPage === 3
-                      ? "border-blue-600 bg-blue-50/80 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  3
-                </button>
-                <button
-                  disabled={currentPage >= 3}
-                  onClick={() => {
-                    setCurrentPage((p) => Math.min(3, p + 1));
-                    showToast("Loaded next page.", "info");
-                  }}
-                  className="px-2.5 py-1 rounded-r-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Next
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </nav>
             </div>
@@ -1698,6 +1684,20 @@ export default function DeliveriesPage() {
                 </div>
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Schedule Time
+                  </label>
+                  <input
+                    type="time"
+                    value={newScheduleTime}
+                    onChange={(e) => setNewScheduleTime(e.target.value)}
+                    className="w-full h-9 px-3 font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Carrier Partner
                   </label>
                   <select
@@ -1709,6 +1709,19 @@ export default function DeliveriesPage() {
                     <option value="DHL Global Forwarding">DHL Global Forwarding</option>
                     <option value="UPS Supply Chain">UPS Supply Chain</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Items Count
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newItemsCount}
+                    onChange={(e) => setNewItemsCount(e.target.value)}
+                    placeholder="6"
+                    className="w-full h-9 px-3 font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 

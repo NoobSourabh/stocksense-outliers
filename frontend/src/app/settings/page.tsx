@@ -7,18 +7,15 @@ import {
   Sun,
   Moon,
   Menu,
-  X as CloseIcon,
+  X,
   Check,
   Plus,
   QrCode,
-  Warehouse,
   MapPin,
   Pencil,
   Lock,
   Clock,
-  CheckCircle2,
   Shield,
-  Layers,
   LayoutGrid,
   Truck,
   Package,
@@ -27,7 +24,6 @@ import {
   ChevronRight,
   GitBranch,
   User,
-  SlidersHorizontal,
 } from "lucide-react";
 
 interface SectorItem {
@@ -213,25 +209,25 @@ export default function WarehouseDetailsMobilePage() {
             {/* Desktop Navigation Links */}
             <nav className="hidden xl:flex items-center gap-1 ml-6">
               <Link
-                href="/"
+                href="/dashboard"
                 className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Dashboard
               </Link>
               <Link
-                href="/"
+                href="/operations/deliveries"
                 className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Operations
               </Link>
               <Link
-                href="/"
+                href="/stock"
                 className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Stock
               </Link>
               <Link
-                href="/"
+                href="/moves"
                 className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
               >
                 Move History
@@ -274,12 +270,70 @@ export default function WarehouseDetailsMobilePage() {
               )}
             </button>
 
+            {/* Mobile Menu Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="xl:hidden p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
             {/* User Avatar Circle */}
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white font-mono text-xs sm:text-sm font-semibold flex items-center justify-center shadow-xs">
               A
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="xl:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 space-y-1">
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/operations/deliveries"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+            >
+              Operations (Deliveries)
+            </Link>
+            <Link
+              href="/operations/receipts"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+            >
+              Operations (Receipts)
+            </Link>
+            <Link
+              href="/stock"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+            >
+              Stock
+            </Link>
+            <Link
+              href="/moves"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+            >
+              Move History
+            </Link>
+            <Link
+              href="/settings"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+            >
+              Settings
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* ========================================================================= */}
@@ -730,7 +784,7 @@ export default function WarehouseDetailsMobilePage() {
                 onClick={() => setIsAddZoneOpen(false)}
                 className="text-slate-400 hover:text-slate-600"
               >
-                <CloseIcon className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 

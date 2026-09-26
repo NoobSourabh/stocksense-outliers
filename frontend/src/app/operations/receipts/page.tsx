@@ -18,11 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  Warehouse,
-  Boxes,
   Truck,
   History,
-  Settings,
   Bell,
   Sun,
   Moon,
@@ -30,7 +27,6 @@ import {
   Factory,
   Check,
   Clock,
-  AlertCircle,
   FileText,
   Barcode,
   Menu,
@@ -216,6 +212,13 @@ export default function ReceiptsPage() {
       done: receipts.filter((r) => r.status === "Done").length,
     };
   }, [receipts]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredReceipts.length / rowsPerPage));
+  const paginatedReceipts = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredReceipts.slice(start, start + rowsPerPage);
+  }, [filteredReceipts, currentPage, rowsPerPage]);
 
   // Bulk selection toggles
   const isAllSelected =
@@ -789,7 +792,7 @@ export default function ReceiptsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-800 dark:text-slate-200">
-                  {filteredReceipts.map((row) => {
+                  {paginatedReceipts.map((row) => {
                     const isSelected = selectedIds.has(row.id);
                     return (
                       <tr
@@ -987,7 +990,7 @@ export default function ReceiptsPage() {
 
             {/* Mobile Responsive Cards View */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredReceipts.map((row) => (
+              {paginatedReceipts.map((row) => (
                 <div key={row.id} className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1058,8 +1061,10 @@ export default function ReceiptsPage() {
             <div className="px-4 sm:px-6 py-3.5 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-3">
                 <span>
-                  Showing <strong className="font-mono text-slate-800 dark:text-slate-200 font-semibold">1-{filteredReceipts.length}</strong> of{" "}
-                  <strong className="font-mono text-slate-800 dark:text-slate-200 font-semibold">{receipts.length}</strong> receipts
+                  Showing <strong className="font-mono text-slate-800 dark:text-slate-200 font-semibold">
+                    {filteredReceipts.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredReceipts.length)}
+                  </strong> of{" "}
+                  <strong className="font-mono text-slate-800 dark:text-slate-200 font-semibold">{filteredReceipts.length}</strong> receipts
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1072,7 +1077,10 @@ export default function ReceiptsPage() {
                   <span className="text-slate-400">Rows per page</span>
                   <select
                     value={rowsPerPage}
-                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                    onChange={(e) => {
+                      setRowsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                     className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono rounded px-2 py-1 focus:ring-0 focus:outline-none"
                   >
                     <option value={10}>10</option>
@@ -1089,35 +1097,23 @@ export default function ReceiptsPage() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-7 h-7 rounded border font-mono text-xs flex items-center justify-center font-medium transition-colors cursor-pointer ${
+                        currentPage === pageNum
+                          ? "border-slate-900 dark:border-blue-600 bg-slate-900 dark:bg-blue-600 text-white font-semibold"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
                   <button
-                    onClick={() => setCurrentPage(1)}
-                    className="w-7 h-7 rounded border border-slate-900 dark:border-blue-600 bg-slate-900 dark:bg-blue-600 text-white font-mono text-xs flex items-center justify-center font-medium"
-                  >
-                    1
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(2)}
-                    className="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-mono text-xs flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    2
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(3)}
-                    className="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-mono text-xs flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    3
-                  </button>
-                  <span className="px-1 text-slate-400 font-mono">…</span>
-                  <button
-                    onClick={() => setCurrentPage(10)}
-                    className="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-mono text-xs flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    10
-                  </button>
-                  <button
-                    disabled={currentPage >= 10}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                    className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
