@@ -2,6 +2,28 @@
 
 StockSense — Intelligent stock and inventory outlier analysis platform developed for the Odoo Hackathon.
 
+## Previews
+
+### Operations Dashboard
+A live view of incoming and outgoing work, stock exceptions, and scheduled transfers.
+![Operations Dashboard](docs/screenshots/01-dashboard.png)
+
+### Operations — Receipts
+Track and process incoming inventory receipts and vendor shipments.
+![Receipts](docs/screenshots/02-receipts.png)
+
+### Operations — Deliveries (Kanban)
+Interactive Kanban board for managing deliveries across Draft, Waiting, Ready, Done, and Canceled stages.
+![Deliveries Kanban](docs/screenshots/03-deliveries-kanban.png)
+
+### Product Catalog
+Detailed product catalog with unit costs, inventory availability, and reorder point monitoring.
+![Product Catalog](docs/screenshots/04-products.png)
+
+### Stock Management
+Multi-warehouse and location-level stock breakdown with quick stock update capabilities.
+![Stock Overview](docs/screenshots/05-stock.png)
+
 ## Team Outliers
 
 | Member | Role |
