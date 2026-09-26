@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, Save } from "lucide-react";
 import { stockApi, type Operation } from "@/lib/stock-api";
 import { ApiError } from "@/lib/api";
+import { showCreateSuccessToast, showUpdateSuccessToast, showErrorToast } from "@/lib/toast-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
@@ -104,14 +105,20 @@ function NewOperationWorkspace({
         queryClient.invalidateQueries({ queryKey: ["operations"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
       ]);
+      showCreateSuccessToast(label);
       router.replace(`/operations/${kind}/${created.id}`);
     },
-    onError: (error) => setMessage(error instanceof ApiError ? error.message : "Could not create the operation."),
+    onError: (error) => {
+      setMessage(error instanceof ApiError ? error.message : "Could not create the operation.");
+      showErrorToast(error, `Could not create ${label.toLowerCase()}`);
+    },
   });
 
   const allLocations = warehouses.data?.items.flatMap((warehouse) =>
     warehouse.locations?.map((location) => ({ ...location, warehouseName: warehouse.name })) ?? []
   ) ?? [];
+  const internalLocations = allLocations.filter((location) => location.kind === "internal");
+  const selectableLocations = internalLocations.length > 0 ? internalLocations : allLocations;
   const selectedProduct = products.data?.items.find((item) => item.id === productId);
   const isLoading = products.isPending || warehouses.isPending || (usesPartner && partners.isPending);
   const loadError = products.isError || warehouses.isError || (usesPartner && partners.isError);
@@ -158,7 +165,7 @@ function NewOperationWorkspace({
                 label={type === "receipt" ? "Destination location" : "Source location"}
                 value={locationId}
                 onChange={setLocationId}
-                options={allLocations.filter((location) => location.kind === "internal").map((location) => [location.id, `${location.name} · ${location.warehouseName}`] as [string, string])}
+                options={selectableLocations.map((location) => [location.id, `${location.name} · ${location.warehouseName}`] as [string, string])}
               />
               {type !== "adjustment" && <Field label="Schedule date" type="date" value={scheduleDate} onChange={setScheduleDate} required />}
               {type === "adjustment" && <Field label="Reason" value={reason} onChange={setReason} required />}
@@ -217,8 +224,12 @@ function DetailOperationWorkspace({ kind, id }: { kind: OperationKind; id: strin
       queryClient.setQueryData(["operation", id], updated);
       await Promise.all(["operations", "dashboard", "moves", "products", "product", "stock"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
       setMessage(`Operation ${updated.status}.`);
+      showUpdateSuccessToast(label);
     },
-    onError: (error) => setMessage(error instanceof ApiError ? error.message : "Could not update the operation."),
+    onError: (error) => {
+      setMessage(error instanceof ApiError ? error.message : "Could not update the operation.");
+      showErrorToast(error, `Could not update ${label.toLowerCase()}`);
+    },
   });
 
   const data = operation.data;

@@ -10,6 +10,7 @@ import { stockApi } from "@/lib/stock-api";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { showCreateSuccessToast, showErrorToast } from "@/lib/toast-utils";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -24,8 +25,15 @@ export default function NewProductPage() {
   const [message, setMessage] = useState("");
   const create = useMutation({
     mutationFn: () => stockApi.createProduct({ name: name.trim(), sku: sku.trim(), categoryId, unit: unit.trim(), unitCost, reorderPoint }),
-    onSuccess: async (product) => { await queryClient.invalidateQueries({ queryKey: ["products"] }); router.replace(`/products/${product.id}`); },
-    onError: (error) => setMessage(error instanceof ApiError ? error.message : "Could not create the product."),
+    onSuccess: async (product) => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      showCreateSuccessToast("Product");
+      router.replace(`/products/${product.id}`);
+    },
+    onError: (error) => {
+      setMessage(error instanceof ApiError ? error.message : "Could not create the product.");
+      showErrorToast(error, "Could not create product");
+    },
   });
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
