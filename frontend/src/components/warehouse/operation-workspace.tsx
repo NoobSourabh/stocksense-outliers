@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Save } from "lucide-react";
+import { ArrowLeft, Check, Save, AlertCircle } from "lucide-react";
 import { stockApi, type Operation } from "@/lib/stock-api";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RoutePanel, RouteScaffold } from "@/components/warehouse/route-scaffold";
 import { StatusBadge } from "@/components/status-badge";
+import { SkeletonForm } from "@/components/skeleton-form";
 
 export type OperationKind = "receipts" | "deliveries" | "adjustments";
 const TYPE = { receipts: "receipt", deliveries: "delivery", adjustments: "adjustment" } as const;
@@ -75,9 +76,31 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
       <Link href={`/operations/${kind}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to {kind}</Link>
       {data && <StatusBadge status={data.status[0]?.toUpperCase() + data.status.slice(1)} />}
     </div>
-    {isLoading ? <p className="py-12 text-center text-sm text-muted-foreground" role="status">Loading operation details…</p>
-      : loadError ? <div className="grid justify-items-center gap-3 py-12 text-center"><p className="text-sm text-destructive">Couldn’t load the required inventory data.</p><Button variant="outline" onClick={() => { void operation.refetch(); void products.refetch(); void warehouses.refetch(); }}>Retry</Button></div>
-        : <form onSubmit={submit}>
+    {isLoading ? (
+      <div className="py-4">
+        <SkeletonForm />
+      </div>
+    ) : loadError ? (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
+        <AlertCircle className="size-10 text-destructive mb-3" />
+        <h3 className="text-base font-semibold text-destructive">Couldn’t load inventory data</h3>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          Could not retrieve operation details or reference catalogs from the server.
+        </p>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => {
+            void operation.refetch();
+            void products.refetch();
+            void warehouses.refetch();
+          }}
+        >
+          Try Again
+        </Button>
+      </div>
+    ) : (
+      <form onSubmit={submit}>
           <RoutePanel title="Operation details" description="The server assigns a reference and records the responsible user.">
             {mode === "new" ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {type !== "adjustment" && <Select label={type === "receipt" ? "Supplier" : "Customer"} value={partnerId} onChange={setPartnerId} options={(partners.data?.items ?? []).map((item) => [item.id, item.name] as [string, string])} />}
@@ -102,7 +125,8 @@ export function OperationWorkspace({ kind, mode, id }: { kind: OperationKind; mo
               {data?.status === "done" && <span className="self-center text-sm text-success">Validated · stock and ledger updated</span>}
             </>}
           </div></div>
-        </form>}
+        </form>
+    )}
   </RouteScaffold>;
 }
 
